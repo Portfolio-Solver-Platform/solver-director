@@ -6,6 +6,9 @@ build:
   artifacts:
     - image: solver-director-skaffold
       context: .
+  tagPolicy:
+    gitCommit: {}
+
 
 profiles:
   - name: dev
@@ -18,13 +21,11 @@ profiles:
       helm:
         releases:
           - name: solver-director
-            chartPath: helm/solver-director
+            chartPath: helm
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
-            valuesFiles:
-              - helm/solver-director/values-dev.yaml
 
-    portForward:
+    portForward: # TODO: remove portword when we have ingress
       - resourceType: service
         resourceName: solver-director
         port: 8080
@@ -40,9 +41,11 @@ profiles:
       helm:
         releases:
           - name: solver-director
-            chartPath: helm/solver-director
+            chartPath: helm
+            setValueTemplates:
+              image: "{{.IMAGE_FULLY_QUALIFIED}}"
             valuesFiles:
-              - helm/solver-director/values-staging.yaml
+              - helm/values-prod.yaml
             wait: true
             upgradeOnChange: true
 
@@ -56,8 +59,10 @@ profiles:
       helm:
         releases:
           - name: solver-director
-            chartPath: helm/solver-director
+            chartPath: helm
+            setValueTemplates:
+              image: "{{.IMAGE_FULLY_QUALIFIED}}"
             valuesFiles:
-              - helm/solver-director/values-prod.yaml
+              - helm/values-prod.yaml
             wait: true
             upgradeOnChange: true

@@ -7,14 +7,26 @@ metadata:
 
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+    type: {{ .Values.updateStrategy.type }}
+    rollingUpdate:
+      maxUnavailable: {{ .Values.updateStrategy.maxUnavailable }}
+      maxSurge: {{ .Values.updateStrategy.maxSurge }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "solver-director.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "solver-director.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      securityContext:
+          runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+          seccompProfile:
+            type: {{ .Values.securityContext.seccompProfile.type }}
       containers:
         - name: solver-director-server
           image: {{ required "image should be set by skaffold which it is not" .Values.image }}
@@ -23,10 +35,10 @@ spec:
             - containerPort: {{ .Values.service.targetPort }}
           readinessProbe:
             httpGet:
-              path: {{ .Values.probs.readiness.path }}
-              port: {{ .Values.probs.readiness.port }}
+              path: {{ .Values.probes.readiness.path }}
+              port: {{ .Values.probes.readiness.port }}
           livenessProbe:
             httpGet:
-              path: {{ .Values.probs.liveness.path }}
-              port: {{ .Values.probs.liveness.port }}
+              path: {{ .Values.probes.liveness.path }}
+              port: {{ .Values.probes.liveness.port }}
           resources: {}

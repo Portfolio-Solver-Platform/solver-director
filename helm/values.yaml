@@ -1,11 +1,26 @@
 image: "" # skaffold handles this name, since each profile needs different image names
 replicaCount: 1
 
+imagePullPolicy: IfNotPresent
+
+revisionHistoryLimit: 2
+
+updateStrategy:
+  type: RollingUpdate
+  maxUnavailable: 0
+  maxSurge: 1
+
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+
 service:
   port: 8080
   targetPort: 8080
 
-probs:
+probes:
   liveness:
     path: /
     port: 8080
