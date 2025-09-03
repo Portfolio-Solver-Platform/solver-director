@@ -2,10 +2,14 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "solver-director.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "solver-director.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
-  type: ClusterIP
+  type: {{ .Values.service.type }}
   selector:
     app.kubernetes.io/name: {{ include "solver-director.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
