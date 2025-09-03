@@ -1,0 +1,14 @@
+image: "" # skaffold handles this name, since each profile needs different image names
+replicaCount: 2
+
+service:
+  port: 8080
+  targetPort: 8080
+
+probs:
+  liveness:
+    path: /
+    port: 8080
+  readiness:
+    path: /
+    port: 8080

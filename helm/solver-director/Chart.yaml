@@ -1,0 +1,6 @@
+apiVersion: v2
+name: solver-director
+description: solver director to manage the different solver-controllers
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

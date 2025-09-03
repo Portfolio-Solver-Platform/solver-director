@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "solver-director.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "solver-director.name" . }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "solver-director.name" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "solver-director.name" . }}
+    spec:
+      containers:
+        - name: solver-director-server
+          image: {{ required "image should be set by skaffold which it is not" .Values.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probs.readiness.path }}
+              port: {{ .Values.probs.readiness.port }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probs.liveness.path }}
+              port: {{ .Values.probs.liveness.port }}
+          resources: {}

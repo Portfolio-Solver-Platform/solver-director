@@ -1,0 +1,63 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: solver-director-skaffold
+build:
+  artifacts:
+    - image: solver-director-skaffold
+      context: .
+
+profiles:
+  - name: dev
+    activation:
+      - command: dev
+    build:
+      local:
+        push: false
+    deploy:
+      helm:
+        releases:
+          - name: solver-director
+            chartPath: helm/solver-director
+            setValueTemplates:
+              image: "{{.IMAGE_FULLY_QUALIFIED}}"
+            valuesFiles:
+              - helm/solver-director/values-dev.yaml
+
+    portForward:
+      - resourceType: service
+        resourceName: solver-director
+        port: 8080
+        localPort: 8080
+
+  - name: staging
+    build:
+      local:
+        push: true
+      # optional: set your staging registry
+      # defaultRepo: "registry.example.com/staging"
+    deploy:
+      helm:
+        releases:
+          - name: solver-director
+            chartPath: helm/solver-director
+            valuesFiles:
+              - helm/solver-director/values-staging.yaml
+            wait: true
+            upgradeOnChange: true
+
+  - name: prod
+    build:
+      local:
+        push: true
+      # optional: set your prod registry
+      # defaultRepo: "registry.example.com/prod"
+    deploy:
+      helm:
+        releases:
+          - name: solver-director
+            chartPath: helm/solver-director
+            valuesFiles:
+              - helm/solver-director/values-prod.yaml
+            wait: true
+            upgradeOnChange: true
