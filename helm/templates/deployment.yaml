@@ -1,12 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "solver-director.fullname" . }}
+  name: {{ include "service.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "solver-director.name" . }}
+    app.kubernetes.io/name: {{ include "service.name" . }}
 
 spec:
-  replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   strategy:
     type: {{ .Values.updateStrategy.type }}
@@ -15,12 +14,12 @@ spec:
       maxSurge: {{ .Values.updateStrategy.maxSurge }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "solver-director.name" . }}
+      app.kubernetes.io/name: {{ include "service.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "solver-director.name" . }}
+        app.kubernetes.io/name: {{ include "service.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       securityContext:
@@ -30,7 +29,7 @@ spec:
       containers:
         - name: solver-director-server
           image: {{ required "image should be set by skaffold which it is not" .Values.image }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
             - containerPort: {{ .Values.service.targetPort }}
           readinessProbe:
@@ -41,4 +40,10 @@ spec:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
               port: {{ .Values.probes.liveness.port }}
-          resources: {}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}  

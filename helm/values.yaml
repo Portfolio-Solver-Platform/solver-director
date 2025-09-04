@@ -1,9 +1,10 @@
-image: "" # skaffold handles this name, since each profile needs different image names
-replicaCount: 1
+# image: "" # skaffold handles this name, since each profile needs different image names
 
 imagePullPolicy: IfNotPresent
 
 revisionHistoryLimit: 2
+
+repository: my-docker-registry/solver-director
 
 updateStrategy:
   type: RollingUpdate
@@ -15,8 +16,8 @@ securityContext:
   seccompProfile:
     type: RuntimeDefault
 
-
 service:
+  type: ClusterIP
   port: 8080
   targetPort: 8080
 
@@ -27,3 +28,20 @@ probes:
   readiness:
     path: /
     port: 8080
+
+
+pdb:
+  maxUnavailable: 1
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
+
+hpa:
+  minReplicas: 1
+  maxReplicas: 10
+  averageUtilization: 70

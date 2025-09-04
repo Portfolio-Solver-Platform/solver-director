@@ -9,6 +9,15 @@ build:
   tagPolicy:
     gitCommit: {}
 
+deploy:
+  helm:
+    releases:
+      - name: metrics-server
+        repo: https://kubernetes-sigs.github.io/metrics-server/
+        remoteChart: metrics-server
+        namespace: kube-system
+
+
 
 profiles:
   - name: dev
@@ -22,19 +31,28 @@ profiles:
         releases:
           - name: solver-director
             chartPath: helm
+            namespace: default
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
+
+          - name: metrics-server
+            repo: https://kubernetes-sigs.github.io/metrics-server/
+            remoteChart: metrics-server
+            namespace: kube-system
+            setValues:
+              args[0]: --kubelet-insecure-tls
 
     portForward: # TODO: remove portword when we have ingress
       - resourceType: service
         resourceName: solver-director
+        namespace: default
         port: 8080
         localPort: 8080
 
   - name: staging
     build:
       local:
-        push: true
+        push: false # TODO set to true
       # optional: set your staging registry
       # defaultRepo: "registry.example.com/staging"
     deploy:
@@ -48,6 +66,13 @@ profiles:
               - helm/values-prod.yaml
             wait: true
             upgradeOnChange: true
+
+          - name: metrics-server
+            repo: https://kubernetes-sigs.github.io/metrics-server/
+            remoteChart: metrics-server
+            namespace: kube-system
+            setValues:
+              args[0]: --kubelet-insecure-tls
 
   - name: prod
     build:
@@ -66,3 +91,8 @@ profiles:
               - helm/values-prod.yaml
             wait: true
             upgradeOnChange: true
+
+          - name: metrics-server
+            repo: https://kubernetes-sigs.github.io/metrics-server/
+            remoteChart: metrics-server
+            namespace: kube-system
