@@ -4,7 +4,6 @@ imagePullPolicy: IfNotPresent
 
 revisionHistoryLimit: 2
 
-repository: my-docker-registry/solver-director
 
 updateStrategy:
   type: RollingUpdate
