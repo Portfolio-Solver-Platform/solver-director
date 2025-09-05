@@ -11,10 +11,18 @@ updateStrategy:
   maxUnavailable: 0
   maxSurge: 1
 
-securityContext:
+podSecurityContext:
   runAsNonRoot: true
   seccompProfile:
     type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
 
 service:
   type: ClusterIP
@@ -25,9 +33,17 @@ probes:
   liveness:
     path: /
     port: 8080
+    initialDelaySeconds: 30 
+    timeoutSeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
   readiness:
     path: /
     port: 8080
+    initialDelaySeconds: 5   
+    timeoutSeconds: 3
+    periodSeconds: 5
+    failureThreshold: 2      
 
 
 pdb:
@@ -45,3 +61,5 @@ hpa:
   minReplicas: 1
   maxReplicas: 10
   averageUtilization: 70
+
+

@@ -23,23 +23,39 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       securityContext:
-          runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
-          seccompProfile:
-            type: {{ .Values.securityContext.seccompProfile.type }}
+        runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
+        seccompProfile:
+          type: {{ .Values.podSecurityContext.seccompProfile.type }}
       containers:
         - name: solver-director-server
           image: {{ required "image should be set by skaffold which it is not" .Values.image }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: {{ .Values.containerSecurityContext.allowPrivilegeEscalation }}
+            readOnlyRootFilesystem: {{ .Values.containerSecurityContext.readOnlyRootFilesystem }}
+            capabilities:
+              drop: {{ .Values.containerSecurityContext.capabilities.drop }}
           ports:
             - containerPort: {{ .Values.service.targetPort }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness.path }}
               port: {{ .Values.probes.readiness.port }}
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.liveness.path }}
               port: {{ .Values.probes.liveness.port }}
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           resources:
             requests:
               cpu: {{ .Values.resources.requests.cpu }}
@@ -47,3 +63,6 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}  
+      volumes:
+        - name: tmp
+          emptyDir: {}
