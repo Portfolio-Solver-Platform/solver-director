@@ -1,33 +1,28 @@
 {{/*
-Expand the name of the chart (DNS-1123 safe).
+Expand the name of the chart.
 */}}
 {{- define "service.name" -}}
-{{- $raw := default .Chart.Name .Values.nameOverride -}}
-{{- $lower := lower $raw -}}
-{{- $dashed := replace $lower "_" "-" -}}
-{{- $clean := regexReplaceAll "[^a-z0-9-]+" $dashed "-" -}}
-{{- $trunc := trunc 63 $clean -}}
-{{- trimSuffix "-" $trunc -}}
+{{- if .Values.service.name }}
+{{- .Values.service.name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
 {{- end }}
 
 {{/*
-Create a default fully qualified app name (DNS-1123 safe).
-If fullnameOverride is set, sanitize it; otherwise combine Release.Name and the sanitized chart name.
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
 */}}
 {{- define "service.fullname" -}}
-{{- if .Values.fullnameOverride -}}
-  {{- $raw := .Values.fullnameOverride -}}
-  {{- $lower := lower $raw -}}
-  {{- $dashed := replace $lower "_" "-" -}}
-  {{- $clean := regexReplaceAll "[^a-z0-9-]+" $dashed "-" -}}
-  {{- $trunc := trunc 63 $clean -}}
-  {{- trimSuffix "-" $trunc -}}
-{{- else -}}
-  {{- $name := include "service.name" . -}}
-  {{- if contains $name .Release.Name -}}
-    {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
-  {{- else -}}
-    {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-  {{- end -}}
-{{- end -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default (include "service.name" .) }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
 {{- end }}
