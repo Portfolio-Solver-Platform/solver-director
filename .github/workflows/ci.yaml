@@ -1,0 +1,51 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CI_IMAGE: local-ci:${{ github.sha }}
+
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ci
+          tags: ${{ env.CI_IMAGE }}
+          load: true
+          pull: true
+          cache-from: type=gha
+          cache-to: type=gha, mode=max, ignore-error=true
+        
+      - name: Lint
+        run: docker run --rm $CI_IMAGE ruff check .
+      
+      - name: Test
+        run: docker run --rm $CI_IMAGE pytest -q --maxfail=3
+
+      - name: Audit code
+        run: docker run --rm $CI_IMAGE bandit -q -r . -x tests
+
+      - name: Dependency audit
+        run: docker run --rm $CI_IMAGE pip-audit
+
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: ${{ runner.os }}-trivy-db
+          restore-keys: ${{ runner.os }}-trivy-

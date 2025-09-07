@@ -42,13 +42,6 @@ profiles:
             setValues:
               args[0]: --kubelet-insecure-tls
 
-    portForward: # TODO: remove portword when we have ingress
-      - resourceType: service
-        resourceName: solver-director
-        namespace: default
-        port: 8080
-        localPort: 8080
-
   - name: staging
     build:
       local:
