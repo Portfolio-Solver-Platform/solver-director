@@ -1,4 +1,4 @@
-FROM python:3.13-slim as base
+FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -11,6 +11,7 @@ COPY requirements.txt .
 COPY requirements-dev.txt . 
 
 USER 10001
+ENV PATH="/home/appuser/.local/bin:${PATH}"
 
 FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt

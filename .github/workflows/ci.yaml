@@ -29,7 +29,7 @@ jobs:
           load: true
           pull: true
           cache-from: type=gha
-          cache-to: type=gha, mode=max, ignore-error=true
+          cache-to: type=gha,mode=max,ignore-error=true
         
       - name: Lint
         run: docker run --rm $CI_IMAGE ruff check .
@@ -50,17 +50,13 @@ jobs:
           key: ${{ runner.os }}-trivy-db
           restore-keys: ${{ runner.os }}-trivy-
 
+      - name: Trivy scan (image)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ env.CI_IMAGE }}
+          format: table
+          exit-code: 1
+          severity: MEDIUM,HIGH,CRITICAL
+          vuln-type: 'os,library'
+          ignore-unfixed: true
 
-      - name: Docker image security scan (Trivy)
-        run: |
-          mkdir -p ~/.cache/trivy
-          docker run --rm \
-            -v ~/.cache/trivy:/root/.cache/ \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.66.0 image \
-              --exit-code 1 \
-              --no-progress \
-              --severity MEDIUM,HIGH,CRITICAL \
-              --vuln-type os,library \
-              $CI_IMAGE
-        
