@@ -14,7 +14,7 @@ USER 10001
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 
 FROM base AS dev
-RUN pip install --no-cache-dir --user -r requirements-dev.txt
+RUN pip install --no-cache-dir -r requirements-dev.txt
 COPY src/ .
 
 EXPOSE 8080
