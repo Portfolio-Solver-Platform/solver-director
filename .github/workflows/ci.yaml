@@ -1,4 +1,4 @@
-name: ci
+name: CI
 on:
   push:
   pull_request:
@@ -24,7 +24,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: ci
+          target: dev
           tags: ${{ env.CI_IMAGE }}
           load: true
           pull: true
@@ -49,3 +49,18 @@ jobs:
           path: ~/.cache/trivy
           key: ${{ runner.os }}-trivy-db
           restore-keys: ${{ runner.os }}-trivy-
+
+
+      - name: Docker image security scan (Trivy)
+        run: |
+          mkdir -p ~/.cache/trivy
+          docker run --rm \
+            -v ~/.cache/trivy:/root/.cache/ \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.66.0 image \
+              --exit-code 1 \
+              --no-progress \
+              --severity MEDIUM,HIGH,CRITICAL \
+              --vuln-type os,library \
+              $CI_IMAGE
+        
