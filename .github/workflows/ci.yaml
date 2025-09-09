@@ -1,4 +1,4 @@
-name: ci
+name: CI
 on:
   push:
   pull_request:
@@ -24,21 +24,21 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: ci
+          target: dev
           tags: ${{ env.CI_IMAGE }}
           load: true
           pull: true
           cache-from: type=gha
-          cache-to: type=gha, mode=max, ignore-error=true
+          cache-to: type=gha,mode=max,ignore-error=true
         
       - name: Lint
-        run: docker run --rm $CI_IMAGE ruff check .
+        run: docker run --rm $CI_IMAGE ruff check . --no-cache
       
       - name: Test
-        run: docker run --rm $CI_IMAGE pytest -q --maxfail=3
+        run: docker run --rm $CI_IMAGE pytest -q -p no:cacheprovider
 
       - name: Audit code
-        run: docker run --rm $CI_IMAGE bandit -q -r . -x tests
+        run: docker run --rm $CI_IMAGE bandit . -qrx ./tests
 
       - name: Dependency audit
         run: docker run --rm $CI_IMAGE pip-audit
@@ -46,6 +46,32 @@ jobs:
       - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
-          path: ~/.cache/trivy
+          path: .trivycache 
           key: ${{ runner.os }}-trivy-db
           restore-keys: ${{ runner.os }}-trivy-
+
+      - name: Trivy scan (image)
+        uses: aquasecurity/trivy-action@0.26.0
+        with:
+          image-ref: ${{ env.CI_IMAGE }}
+          format: table
+          exit-code: 1
+          severity: MEDIUM,HIGH,CRITICAL
+          vuln-type: 'os,library'
+          ignore-unfixed: false 
+          cache-dir: .trivycache
+
+
+      # # Always run this to surface actionable LOW/MEDIUM (fixed only), but never fail
+      # - name: Trivy scan (image) — advisory LOW/MEDIUM (fixed only)
+      #   if: always()
+      #   uses: aquasecurity/trivy-action@0.26.0
+      #   with:
+      #     image-ref: ${{ env.CI_IMAGE }}
+      #     format: table
+      #     exit-code: 0
+      #     severity: LOW,MEDIUM
+      #     vuln-type: 'os,library'
+          
+      #     ignore-unfixed: true
+      #     cache-dir: .trivycache
