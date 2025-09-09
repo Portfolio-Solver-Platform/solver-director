@@ -29,16 +29,16 @@ jobs:
           load: true
           pull: true
           cache-from: type=gha
-          cache-to: type=gha,mode=max,ignore-error=true
+          cache-to: type=gha,mode=max,ignore-error=true # maybe remove caching?
         
       - name: Lint
         run: docker run --rm $CI_IMAGE ruff check .
       
       - name: Test
-        run: docker run --rm $CI_IMAGE pytest -q --maxfail=3
+        run: docker run --rm $CI_IMAGE pytest -q
 
       - name: Audit code
-        run: docker run --rm $CI_IMAGE bandit -q -r . -x tests
+        run: docker run --rm $CI_IMAGE bandit . -qrx ./tests
 
       - name: Dependency audit
         run: docker run --rm $CI_IMAGE pip-audit
@@ -51,7 +51,7 @@ jobs:
           restore-keys: ${{ runner.os }}-trivy-
 
       - name: Trivy scan (image)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.26.0
         with:
           image-ref: ${{ env.CI_IMAGE }}
           format: table
