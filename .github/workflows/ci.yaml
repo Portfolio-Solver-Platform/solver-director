@@ -59,7 +59,7 @@ jobs:
           severity: MEDIUM,HIGH,CRITICAL
           vuln-type: 'os,library'
           ignore-unfixed: false 
-          cache-dir: .trivycache 
+          cache-dir: .trivycache
 
 
       # # Always run this to surface actionable LOW/MEDIUM (fixed only), but never fail
