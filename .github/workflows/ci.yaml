@@ -32,10 +32,10 @@ jobs:
           cache-to: type=gha,mode=max,ignore-error=true # maybe remove caching?
         
       - name: Lint
-        run: docker run --rm $CI_IMAGE ruff check .
+        run: docker run --rm $CI_IMAGE ruff check . --no-cache
       
       - name: Test
-        run: docker run --rm $CI_IMAGE pytest -q
+        run: docker run --rm $CI_IMAGE pytest -q -p no:cacheprovider
 
       - name: Audit code
         run: docker run --rm $CI_IMAGE bandit . -qrx ./tests
@@ -46,7 +46,7 @@ jobs:
       - name: Cache Trivy DB
         uses: actions/cache@v4
         with:
-          path: ~/.cache/trivy
+          path: .trivycache 
           key: ${{ runner.os }}-trivy-db
           restore-keys: ${{ runner.os }}-trivy-
 
@@ -56,7 +56,8 @@ jobs:
           image-ref: ${{ env.CI_IMAGE }}
           format: table
           exit-code: 1
-          severity: MEDIUM,HIGH,CRITICAL
+          severity: MEDIUM,HIGH,CRITICAL # which severities to choose?
           vuln-type: 'os,library'
           ignore-unfixed: true
+          cache-dir: .trivycache 
 
