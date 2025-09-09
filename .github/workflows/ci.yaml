@@ -29,7 +29,7 @@ jobs:
           load: true
           pull: true
           cache-from: type=gha
-          cache-to: type=gha,mode=max,ignore-error=true # maybe remove caching?
+          cache-to: type=gha,mode=max,ignore-error=true
         
       - name: Lint
         run: docker run --rm $CI_IMAGE ruff check . --no-cache
@@ -56,8 +56,22 @@ jobs:
           image-ref: ${{ env.CI_IMAGE }}
           format: table
           exit-code: 1
-          severity: MEDIUM,HIGH,CRITICAL # which severities to choose?
+          severity: MEDIUM,HIGH,CRITICAL 
           vuln-type: 'os,library'
-          ignore-unfixed: true
+          ignore-unfixed: false 
           cache-dir: .trivycache 
 
+
+      # # Always run this to surface actionable LOW/MEDIUM (fixed only), but never fail
+      # - name: Trivy scan (image) — advisory LOW/MEDIUM (fixed only)
+      #   if: always()
+      #   uses: aquasecurity/trivy-action@0.26.0
+      #   with:
+      #     image-ref: ${{ env.CI_IMAGE }}
+      #     format: table
+      #     exit-code: 0
+      #     severity: LOW,MEDIUM
+      #     vuln-type: 'os,library'
+          
+      #     ignore-unfixed: true
+      #     cache-dir: .trivycache
