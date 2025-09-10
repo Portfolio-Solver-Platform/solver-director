@@ -63,8 +63,8 @@ hpa:
 
 
 db:
-  host: ""
+  host: "postgres-postgresql"
   port: "5432"
-  name: ""
-  user: ""
-  passwordSecretName: ""
+  name: "appdb"
+  user: "appuser"
+  passwordSecretName: "app-db-credentials"
