@@ -25,12 +25,7 @@ profiles:
             namespace: default
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
-            setValues:
-              db.host: postgresql.primary.svc.cluster.local
-              db.port: "5432"
-              db.name: appdb
-              db.user: appuser
-              db.passwordSecretName: app-db-credentials
+
 
 
           - name: metrics-server
