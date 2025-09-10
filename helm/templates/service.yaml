@@ -5,11 +5,13 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "service.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
+    monitoring: {{ .Values.monitoringType }}
 spec:
   type: {{ .Values.service.type }}
   selector:
     app.kubernetes.io/name: {{ include "service.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
-    - port: {{ .Values.service.port }}
+    - name: {{ .Values.service.portName }}
+      port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
