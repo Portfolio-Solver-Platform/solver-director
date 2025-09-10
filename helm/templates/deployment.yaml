@@ -63,6 +63,20 @@ spec:
             limits:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}  
+          env:
+            - name: DB_HOST
+              value: {{ .Values.config.db.host }}
+            - name: DB_PORT
+              value: {{ .Values.config.db.port }}
+            - name: DB_NAME
+              value: {{ .Values.config.db.name }}
+            - name: DB_USER
+              value: {{ .Values.config.db.user }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.passwordSecretName }}
+                  key: password
       volumes:
         - name: tmp
           emptyDir: {}

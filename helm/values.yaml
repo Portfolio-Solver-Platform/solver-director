@@ -62,3 +62,9 @@ hpa:
   averageUtilization: 70
 
 
+db:
+  host: ""
+  port: "5432"
+  name: ""
+  user: ""
+  passwordSecretName: ""

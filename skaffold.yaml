@@ -9,15 +9,6 @@ build:
   tagPolicy:
     gitCommit: {}
 
-deploy:
-  helm:
-    releases:
-      - name: metrics-server
-        repo: https://kubernetes-sigs.github.io/metrics-server/
-        remoteChart: metrics-server
-        namespace: kube-system
-
-
 
 profiles:
   - name: dev
@@ -34,6 +25,13 @@ profiles:
             namespace: default
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
+            setValues:
+              db.host: postgresql.primvary.svc.cluster.local
+              db.port: "5432"
+              db.name: appdb
+              db.user: appuser
+              db.passwordSecretName: app-db-credetials
+
 
           - name: metrics-server
             repo: https://kubernetes-sigs.github.io/metrics-server/
@@ -41,6 +39,17 @@ profiles:
             namespace: kube-system
             setValues:
               args[0]: --kubelet-insecure-tls
+
+          - name: postgres
+            remoteChart: oci://registry-1.docker.io/bitnamicharts/postgresql
+            version: 16.7.27
+            namespace: kube-system
+            setValues:
+              global.postgresql.auth.username: appuser
+              global.postgresql.auth.password: devpass
+              global.postgresql.auth.database: appdb
+              primary.persistence.enabled: false
+          
 
   - name: staging
     build:
