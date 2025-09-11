@@ -3,6 +3,8 @@ name = "solver-director"
 version = "0.1.0"
 dependencies = [
     "flask>=3.0,<4.0",
+    "psycopg2-binary>=2.9,<3.0",
+    "gunicorn>=22.0,<23.0",
 ]
 
 [project.optional-dependencies]

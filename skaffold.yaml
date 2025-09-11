@@ -9,15 +9,6 @@ build:
   tagPolicy:
     gitCommit: {}
 
-deploy:
-  helm:
-    releases:
-      - name: metrics-server
-        repo: https://kubernetes-sigs.github.io/metrics-server/
-        remoteChart: metrics-server
-        namespace: kube-system
-
-
 
 profiles:
   - name: dev
@@ -35,12 +26,18 @@ profiles:
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
 
-          - name: metrics-server
-            repo: https://kubernetes-sigs.github.io/metrics-server/
-            remoteChart: metrics-server
-            namespace: kube-system
+
+          - name: postgres
+            remoteChart: oci://registry-1.docker.io/bitnamicharts/postgresql
+            version: 16.7.27
+            namespace: default
             setValues:
-              args[0]: --kubelet-insecure-tls
+              auth.username: appuser
+              auth.database: appdb
+              auth.existingSecret: app-db-credentials   
+              primary.persistence.enabled: false
+              volumePermissions.enabled: true
+          
 
   - name: staging
     build:

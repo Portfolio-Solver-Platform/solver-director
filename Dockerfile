@@ -20,13 +20,13 @@ RUN pip install --no-cache-dir --user -r requirements-dev.txt
 COPY src/ .
 COPY tests/ ./tests/
 EXPOSE 8080
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "app:app"]
 
 
 FROM base AS runtime
 RUN pip install --no-cache-dir --user -r requirements.txt
 COPY src/ .
 EXPOSE 8080
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "app:app"]
 
 

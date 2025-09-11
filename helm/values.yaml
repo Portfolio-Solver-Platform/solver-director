@@ -62,3 +62,9 @@ hpa:
   averageUtilization: 70
 
 
+db:
+  host: "postgres-postgresql"
+  port: "5432"
+  name: "appdb"
+  user: "appuser"
+  passwordSecretName: "app-db-credentials"
