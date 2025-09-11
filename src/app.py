@@ -76,5 +76,6 @@ if __name__ == "__main__":
     import os
 
     host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
+
     port = int(os.getenv("PORT", "8080"))
     app.run(host=host, port=port)
