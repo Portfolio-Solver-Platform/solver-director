@@ -25,6 +25,7 @@ profiles:
             namespace: default
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
+
           
 
   - name: staging

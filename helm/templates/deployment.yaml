@@ -74,6 +74,7 @@ spec:
               value: {{ .Values.postgres.database.user | quote }}
             - name: DB_PASSWORD
               value: {{ .Values.postgres.database.password | quote }}
+
       volumes:
         - name: tmp
           emptyDir: {}
