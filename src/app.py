@@ -71,11 +71,5 @@ def test_db():
 
 
 if __name__ == "__main__":
-    # app.run(host="0.0.0.0", port=8080)
-
-    import os
-
-    host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
-
-    port = int(os.getenv("PORT", "8080"))
-    app.run(host=host, port=port)
+    debug_mode = os.getenv("FLASK_DEBUG", "False").lower() == "true"
+    app.run(host="127.0.0.1", port=5000, debug=debug_mode)
