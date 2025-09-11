@@ -62,9 +62,32 @@ hpa:
   averageUtilization: 70
 
 
-db:
-  host: "postgres-postgresql"
-  port: "5432"
-  name: "appdb"
-  user: "appuser"
-  passwordSecretName: "app-db-credentials"
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  containerName: postgresql
+  service:
+    name: "postgres-postgresql"
+    port: 5432
+  database:
+    name: "appdb"
+    user: "appuser"
+    password: "devpassword123"
+  securityContext:
+    runAsUser: 999
+    runAsNonRoot: true
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  persistence:
+    claimName: "postgres-data"
+    size: "1Gi"
+    storageClass: "manual"

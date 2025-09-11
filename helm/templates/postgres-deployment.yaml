@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.postgres.service.name }}
+  labels:
+    app: postgres-postgresql
+spec:
+  replicas: {{ .Values.postgres.replicaCount }}
+  selector:
+    matchLabels:
+      app: postgres-postgresql
+  template:
+    metadata:
+      labels:
+        app: postgres-postgresql
+    spec:
+      securityContext:
+        runAsNonRoot: {{ .Values.postgres.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.postgres.securityContext.runAsUser }}
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: {{ .Values.postgres.containerName }}
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: {{ .Values.postgres.resources.requests.cpu | quote }}
+              memory: {{ .Values.postgres.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.postgres.resources.limits.cpu | quote }}
+              memory: {{ .Values.postgres.resources.limits.memory | quote }}
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database.name | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.database.user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.database.password | quote }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: {{ .Values.postgres.service.port }}
+              name: postgresql
+          volumeMounts:
+            - name: postgresql-storage
+              mountPath: /var/lib/postgresql/data
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: run-volume
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: postgresql-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.postgres.persistence.claimName }}
+        - name: tmp-volume
+          emptyDir: {}
+        - name: run-volume
+          emptyDir: {}

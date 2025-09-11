@@ -65,18 +65,16 @@ spec:
               memory: {{ .Values.resources.limits.memory }}  
           env:
             - name: DB_HOST
-              value: {{ .Values.db.host | quote }}
+              value: {{ .Values.postgres.service.name | quote }}
             - name: DB_PORT
-              value: {{ .Values.db.port | quote }}
+              value: {{ .Values.postgres.service.port | quote }}
             - name: DB_NAME
-              value: {{ .Values.db.name | quote }}
+              value: {{ .Values.postgres.database.name | quote }}
             - name: DB_USER
-              value: {{ .Values.db.user | quote }}
+              value: {{ .Values.postgres.database.user | quote }}
             - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.db.passwordSecretName }}
-                  key: password
+              value: {{ .Values.postgres.database.password | quote }}
+
       volumes:
         - name: tmp
           emptyDir: {}

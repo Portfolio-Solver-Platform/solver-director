@@ -26,17 +26,6 @@ profiles:
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
 
-
-          - name: postgres
-            remoteChart: oci://registry-1.docker.io/bitnamicharts/postgresql
-            version: 16.7.27
-            namespace: default
-            setValues:
-              auth.username: appuser
-              auth.database: appdb
-              auth.existingSecret: app-db-credentials   
-              primary.persistence.enabled: false
-              volumePermissions.enabled: true
           
 
   - name: staging
@@ -57,12 +46,6 @@ profiles:
             wait: true
             upgradeOnChange: true
 
-          - name: metrics-server
-            repo: https://kubernetes-sigs.github.io/metrics-server/
-            remoteChart: metrics-server
-            namespace: kube-system
-            setValues:
-              args[0]: --kubelet-insecure-tls
 
   - name: prod
     build:
@@ -82,7 +65,3 @@ profiles:
             wait: true
             upgradeOnChange: true
 
-          - name: metrics-server
-            repo: https://kubernetes-sigs.github.io/metrics-server/
-            remoteChart: metrics-server
-            namespace: kube-system

@@ -1,11 +1,11 @@
 hpa:
   minReplicas: 2
 
-
-
-db:
-  host: {{.DB_HOST}}
-  port: {{.DB_PORT}}
-  name: {{.DB_NAME}}
-  user: {{.DB_USER}}
-  passwordSecretName: {{.DB_PASSWORD_SECRET_NAME}}
+postgres:
+  service:
+    name: {{.DB_HOST}}
+    port: {{.DB_PORT}}
+  database:
+    name: {{.DB_NAME}}
+    user: {{.DB_USER}}
+    password: {{.DB_PASSWORD}}
