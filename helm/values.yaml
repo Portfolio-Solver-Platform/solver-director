@@ -90,4 +90,4 @@ postgres:
   persistence:
     claimName: "postgres-data"
     size: "1Gi"
-    storageClass: "manual"
+    storageClass: "postgres-retain"
