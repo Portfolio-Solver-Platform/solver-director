@@ -17,6 +17,7 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 
 FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt
+COPY pyproject.toml .
 COPY src/ .
 COPY tests/ ./tests/
 EXPOSE 8080
