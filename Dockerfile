@@ -19,6 +19,7 @@ FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt
 COPY pyproject.toml .
 COPY src/ ./src/
+
 COPY tests/ ./tests/
 EXPOSE 8080
 CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "src.app:app"]
