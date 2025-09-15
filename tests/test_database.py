@@ -1,9 +1,9 @@
 import pytest
 
-try:
-    from app import app  # Works in CI (Docker container)
-except ImportError:
-    from src.app import app  # Works locally
+# try:
+#     from app import app  # Works in CI (Docker container)
+# except ImportError:
+from src.app import app  # Works locally
 
 
 @pytest.fixture
