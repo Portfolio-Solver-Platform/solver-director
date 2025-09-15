@@ -25,8 +25,11 @@ containerSecurityContext:
 
 service:
   type: ClusterIP
+  portName: http
   port: 8080
   targetPort: 8080
+
+monitoringType: standard
 
 probes:
   liveness:
