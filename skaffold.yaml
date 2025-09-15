@@ -9,15 +9,6 @@ build:
   tagPolicy:
     gitCommit: {}
 
-deploy:
-  helm:
-    releases:
-      - name: metrics-server
-        repo: https://kubernetes-sigs.github.io/metrics-server/
-        remoteChart: metrics-server
-        namespace: kube-system
-
-
 
 profiles:
   - name: dev
@@ -35,12 +26,7 @@ profiles:
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
 
-          - name: metrics-server
-            repo: https://kubernetes-sigs.github.io/metrics-server/
-            remoteChart: metrics-server
-            namespace: kube-system
-            setValues:
-              args[0]: --kubelet-insecure-tls
+          
 
   - name: staging
     build:
@@ -60,12 +46,6 @@ profiles:
             wait: true
             upgradeOnChange: true
 
-          - name: metrics-server
-            repo: https://kubernetes-sigs.github.io/metrics-server/
-            remoteChart: metrics-server
-            namespace: kube-system
-            setValues:
-              args[0]: --kubelet-insecure-tls
 
   - name: prod
     build:
@@ -85,7 +65,3 @@ profiles:
             wait: true
             upgradeOnChange: true
 
-          - name: metrics-server
-            repo: https://kubernetes-sigs.github.io/metrics-server/
-            remoteChart: metrics-server
-            namespace: kube-system

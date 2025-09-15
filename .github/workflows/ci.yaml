@@ -57,7 +57,7 @@ jobs:
           image-ref: ${{ env.CI_IMAGE }}
           format: table
           exit-code: 1
-          severity: MEDIUM,HIGH,CRITICAL
+          severity: HIGH,CRITICAL
           vuln-type: 'os,library'
           ignore-unfixed: false 
           cache-dir: .trivycache

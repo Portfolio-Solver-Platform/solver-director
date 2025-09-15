@@ -32,6 +32,8 @@ flask==3.1.2
     # via
     #   prometheus-flask-exporter
     #   solver-director (pyproject.toml)
+gunicorn==23.0.0
+    # via solver-director (pyproject.toml)
 idna==3.10
     # via requests
 iniconfig==2.1.0
@@ -57,6 +59,7 @@ packageurl-python==0.17.5
     # via cyclonedx-python-lib
 packaging==25.0
     # via
+    #   gunicorn
     #   pip-audit
     #   pip-requirements-parser
     #   pytest
@@ -76,6 +79,8 @@ prometheus-client==0.22.1
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.23.2
     # via solver-director (pyproject.toml)
+psycopg2-binary==2.9.10
+    # via solver-director (pyproject.toml)
 py-serializable==2.1.0
     # via cyclonedx-python-lib
 pygments==2.19.2
@@ -88,7 +93,7 @@ pytest==8.4.2
     # via
     #   pytest-cov
     #   solver-director (pyproject.toml)
-pytest-cov==6.3.0
+pytest-cov==7.0.0
     # via solver-director (pyproject.toml)
 pyyaml==6.0.2
     # via bandit
