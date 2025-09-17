@@ -18,16 +18,17 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt
 COPY pyproject.toml .
-COPY src/ .
+COPY src/ ./src/
 COPY tests/ ./tests/
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "src.app:app"]
 
 
 FROM base AS runtime
 RUN pip install --no-cache-dir --user -r requirements.txt
-COPY src/ .
+COPY pyproject.toml .
+COPY src/ ./src/
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "src.app:app"]
 
 
