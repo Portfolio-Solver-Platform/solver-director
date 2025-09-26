@@ -3,10 +3,6 @@ class SolverControllerStatus:
         self.user_id = user_id
         self.started = started
         self.error = error
-    
+
     def to_dict(self):
-        return {
-            "user_id": self.user_id,
-            "started": self.started,
-            "error": self.error
-        }
+        return {"user_id": self.user_id, "started": self.started, "error": self.error}

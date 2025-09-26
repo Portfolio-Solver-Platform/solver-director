@@ -1,5 +1,13 @@
 class Challenge:
-    def __init__(self, id: int, name: str, flag: str, docker_image: str, resource_limits: str, is_active: bool):
+    def __init__(
+        self,
+        id: int,
+        name: str,
+        flag: str,
+        docker_image: str,
+        resource_limits: str,
+        is_active: bool,
+    ):
         self.id = id
         self.name = name
         self.flag = flag
@@ -15,5 +23,5 @@ class Challenge:
             flag=json_dict.get("flag"),
             docker_image=json_dict.get("docker_image"),
             resource_limits=json_dict.get("resource_limits"),
-            is_active=json_dict.get("is_active")
+            is_active=json_dict.get("is_active"),
         )

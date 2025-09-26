@@ -1,9 +1,3 @@
-from kubernetes import client
-
-from src.model.challenge_status import SolverControllerStatus
-from src.model.user import User
-
-
 # def check_ctf_started(user_id, challenge_id):
 #     ctf_id = generate_ctf_id(user_id, challenge_id)
 #     kube_client = client.CoreV1Api()

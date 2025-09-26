@@ -1,18 +1,13 @@
-from datetime import datetime, timezone, timedelta
-import json
-import sys
-import time
-
 from fastapi import HTTPException
 
 from kubernetes import client
-from kubernetes.client.rest import ApiException
 
 from src.spawner.status_service import is_user_limit_reached
 from src.model.challenge_status import SolverControllerStatus
 from src.spawner.util.util_service import generate_solver_controller_id
 
 from src.config import Config
+
 
 def start_solver_controller(user_id):
     solver_controller_id = generate_solver_controller_id(user_id)
@@ -24,30 +19,34 @@ def start_solver_controller(user_id):
         )
 
     kube_client = client.CoreV1Api()
-    
-    pod = kube_client.create_namespaced_pod(
+
+    _ = kube_client.create_namespaced_(
         namespace=solver_controller_id, body=create_pod_manifest(solver_controller_id)
     )
-    service = kube_client.create_namespaced_service(
-        namespace=solver_controller_id, body=create_service_manifest(solver_controller_id)
+    _ = kube_client.create_namespaced_service(
+        namespace=solver_controller_id,
+        body=create_service_manifest(solver_controller_id),
     )
 
-    return SolverControllerStatus(
-        user_id, True, None
-    )
+    return SolverControllerStatus(user_id, True, None)
 
 
 def create_pod_manifest(solver_controller_id):
     return {
         "apiVersion": "v1",
         "kind": "Pod",
-        "metadata": {"name": solver_controller_id, "labels": {"solver_controller_id": solver_controller_id}},
+        "metadata": {
+            "name": solver_controller_id,
+            "labels": {"solver_controller_id": solver_controller_id},
+        },
         "spec": {
             "containers": [
                 {
                     "name": solver_controller_id,
                     "image": Config.SolverController.HARBOR_NAME,
-                    "ports": [{"containerPort": Config.SolverController.CONTAINER_PORT}],
+                    "ports": [
+                        {"containerPort": Config.SolverController.CONTAINER_PORT}
+                    ],
                 }
             ]
         },
@@ -62,7 +61,12 @@ def create_service_manifest(ctf_id):
         "spec": {
             "type": "LoadBalancer",
             "selector": {"ctf-id": ctf_id},
-            "ports": [{"port": Config.SolverController.SERVICE_PORT, "targetPort": Config.SolverController.CONTAINER_PORT}],
+            "ports": [
+                {
+                    "port": Config.SolverController.SERVICE_PORT,
+                    "targetPort": Config.SolverController.CONTAINER_PORT,
+                }
+            ],
         },
     }
 
@@ -79,4 +83,3 @@ def create_service_manifest(ctf_id):
 #         else:
 #             time.sleep(5)
 #     return service_ip
-

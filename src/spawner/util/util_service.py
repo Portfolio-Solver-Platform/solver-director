@@ -1,5 +1,3 @@
-
-
 def generate_solver_controller_id(user_id):
     if not user_id:
         raise ValueError("Valid user_id required")
@@ -21,6 +19,6 @@ def generate_solver_controller_id(user_id):
 #             return service
 #     return None
 
-  
+
 # def pod_belongs_to_user(pod, user_id: int) -> bool:
 #     return pod.metadata.labels and f"u{user_id}-" in pod.metadata.labels.get('ctf-id', '')

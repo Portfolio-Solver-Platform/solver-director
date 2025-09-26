@@ -12,9 +12,9 @@ class Config:
         DESCRIPTION = "API to manage solvers runnining on Instance problems"
         VERSION = "v1"
         ROOT_PATH = "/api/solverdirector"
-        
+
     class SolverController:
         HARBOR_NAME = "http://harbor.local/psp/solver-controller"
         SVC_NAME = "solver-controller"
         CONTAINER_PORT = 5000
-        SERVICE_PORT = 80 # 443
+        SERVICE_PORT = 80  # 443
