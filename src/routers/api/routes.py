@@ -13,7 +13,7 @@ class StartResponse(BaseModel):
     project_id: str = Field(..., description="project id to start")
 
 
-@router.post("/start", response_model=StartResponse, summary="Starts solving instances")
+@router.get("/start", response_model=StartResponse, summary="Starts solving instances")
 def start_route():
     """ """
     id = start_solver_controller("sofus")
