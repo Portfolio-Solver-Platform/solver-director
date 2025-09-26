@@ -8,7 +8,7 @@
 #     return SolverControllerStatus(user_id, challenge_id, challenge_url, started, None)
 
 
-def is_user_limit_reached(user_id, namespace):
+def is_user_limit_reached(user_id):
     return False
     # challenge_limit = fetch_challenge_limit(user_id)
     # challenge_limit = 1
