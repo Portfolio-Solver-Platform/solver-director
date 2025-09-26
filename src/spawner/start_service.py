@@ -20,7 +20,7 @@ def start_solver_controller(user_id):
 
     kube_client = client.CoreV1Api()
 
-    _ = kube_client.create_namespaced_(
+    _ = kube_client.create_namespaced_pod(
         namespace=solver_controller_id, body=create_pod_manifest(solver_controller_id)
     )
     _ = kube_client.create_namespaced_service(
