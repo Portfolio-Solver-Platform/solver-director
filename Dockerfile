@@ -21,7 +21,7 @@ COPY pyproject.toml .
 COPY src/ ./src/
 COPY tests/ ./tests/
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "src.app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
 
 
 FROM base AS runtime
@@ -29,6 +29,6 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 COPY pyproject.toml .
 COPY src/ ./src/
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "src.app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
 
 

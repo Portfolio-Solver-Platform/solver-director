@@ -2,17 +2,18 @@
 name = "solver-director"
 version = "0.1.0"
 dependencies = [
-    "flask>=3.0,<4.0",
-    "prometheus-flask-exporter>=0.23.2,<0.24",
+    "fastapi[standard]>=0.117.1,<0.118",
+    "prometheus-fastapi-instrumentator>=7.1.0,<8.0",
     "psycopg2-binary>=2.9,<3.0",
     "gunicorn>=23.0,<24.0",
+    "requests>=2.32.5,<3.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8,<9",
     "pytest-cov>=7,<8",
-    "ruff>=0.6,<1.0",
+    "ruff>=0.13.2,<0.14.0",
     "bandit>=1.7,<2.0",
     "pip-audit>=2.7,<3.0",
 ]
