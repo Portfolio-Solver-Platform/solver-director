@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 
-from kubernetes import client
-
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 from src.spawner.status_service import is_user_limit_reached
 from src.model.challenge_status import SolverControllerStatus
 from src.spawner.util.util_service import generate_solver_controller_id
@@ -17,8 +17,21 @@ def start_solver_controller(user_id):
             status_code=429,
             detail="user has reached it's limit for concurrent solver controllers spawned",
         )
-
+    config.load_incluster_config()  # This tells it to use the mounted service account
     kube_client = client.CoreV1Api()
+    
+    namespace_manifest = {
+        "apiVersion": "v1",
+        "kind": "Namespace",
+        "metadata": {"name": solver_controller_id},
+    }
+    try:
+        kube_client.create_namespace(body=namespace_manifest)
+    except ApiException as e:
+        if e.status == 409:
+            pass # already exists
+        else:
+            raise 
 
     _ = kube_client.create_namespaced_pod(
         namespace=solver_controller_id, body=create_pod_manifest(solver_controller_id)
@@ -53,14 +66,14 @@ def create_pod_manifest(solver_controller_id):
     }
 
 
-def create_service_manifest(ctf_id):
+def create_service_manifest(solver_controller_id):
     return {
         "apiVersion": "v1",
         "kind": "Service",
-        "metadata": {"name": ctf_id, "labels": {"ctf-id": ctf_id}},
+        "metadata": {"name": solver_controller_id, "labels": {"solver_controller_id": solver_controller_id}},
         "spec": {
             "type": "LoadBalancer",
-            "selector": {"ctf-id": ctf_id},
+            "selector": {"solver_controller_id": solver_controller_id},
             "ports": [
                 {
                     "port": Config.SolverController.SERVICE_PORT,
@@ -83,3 +96,58 @@ def create_service_manifest(ctf_id):
 #         else:
 #             time.sleep(5)
 #     return service_ip
+
+
+def create_rbac_manifests(solver_controller_id):
+    """Create service account and role binding for the specific namespace"""
+    
+    # Service Account
+    service_account = {
+        "apiVersion": "v1",
+        "kind": "ServiceAccount",
+        "metadata": {
+            "name": "solver-controller",
+            "namespace": solver_controller_id
+        }
+    }
+    
+    # Role (namespace-scoped permissions)
+    role = {
+        "apiVersion": "rbac.authorization.k8s.io/v1",
+        "kind": "Role",
+        "metadata": {
+            "name": "solver-controller-role",
+            "namespace": solver_controller_id
+        },
+        "rules": [
+            {
+                "apiGroups": [""],
+                "resources": ["pods", "services"],
+                "verbs": ["get", "list", "create", "delete", "watch"]
+            }
+        ]
+    }
+    
+    # Role Binding
+    role_binding = {
+        "apiVersion": "rbac.authorization.k8s.io/v1",
+        "kind": "RoleBinding",
+        "metadata": {
+            "name": "solver-controller-binding",
+            "namespace": solver_controller_id
+        },
+        "roleRef": {
+            "apiGroup": "rbac.authorization.k8s.io",
+            "kind": "Role",
+            "name": "solver-controller-role"
+        },
+        "subjects": [
+            {
+                "kind": "ServiceAccount",
+                "name": "solver-controller",
+                "namespace": solver_controller_id
+            }
+        ]
+    }
+    
+    return service_account, role, role_binding

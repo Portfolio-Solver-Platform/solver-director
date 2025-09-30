@@ -14,7 +14,7 @@ class Config:
         ROOT_PATH = "/api/solverdirector"
 
     class SolverController:
-        HARBOR_NAME = "http://harbor.local/psp/solver-controller"
+        HARBOR_NAME = "harbor.local/psp/solver-controller:latest"
         SVC_NAME = "solver-controller"
         CONTAINER_PORT = 5000
         SERVICE_PORT = 80  # 443

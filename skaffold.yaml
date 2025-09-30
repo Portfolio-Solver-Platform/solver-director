@@ -22,7 +22,7 @@ profiles:
         releases:
           - name: solver-director
             chartPath: helm
-            namespace: default
+            namespace: psp
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
 
