@@ -31,7 +31,25 @@ def start_solver_controller(user_id):
         if e.status == 409:
             pass # already exists
         else:
-            raise 
+            raise
+    
+            
+    template_secret = kube_client.read_namespaced_secret(
+        name="harbor-creds",
+        namespace="psp"
+    )
+
+    new_secret = client.V1Secret(
+        metadata=client.V1ObjectMeta(
+            name="harbor-creds",
+            namespace=solver_controller_id
+        ),
+        type=template_secret.type,
+        data=template_secret.data
+    )
+    
+    kube_client.create_namespaced_secret(namespace=solver_controller_id, body=new_secret)
+
 
     _ = kube_client.create_namespaced_pod(
         namespace=solver_controller_id, body=create_pod_manifest(solver_controller_id)
@@ -41,7 +59,7 @@ def start_solver_controller(user_id):
         body=create_service_manifest(solver_controller_id),
     )
 
-    return SolverControllerStatus(user_id, True, None)
+    return solver_controller_id
 
 
 def create_pod_manifest(solver_controller_id):
@@ -49,13 +67,16 @@ def create_pod_manifest(solver_controller_id):
         "apiVersion": "v1",
         "kind": "Pod",
         "metadata": {
-            "name": solver_controller_id,
-            "labels": {"solver_controller_id": solver_controller_id},
+            "name": "solver-controller",
+            "labels": {"solver_controller_id": "solver-controller"},
         },
         "spec": {
+            "imagePullSecrets": [
+                {"name": "harbor-creds"}
+            ],
             "containers": [
                 {
-                    "name": solver_controller_id,
+                    "name": "solver-controller",
                     "image": Config.SolverController.HARBOR_NAME,
                     "ports": [
                         {"containerPort": Config.SolverController.CONTAINER_PORT}
@@ -70,10 +91,10 @@ def create_service_manifest(solver_controller_id):
     return {
         "apiVersion": "v1",
         "kind": "Service",
-        "metadata": {"name": solver_controller_id, "labels": {"solver_controller_id": solver_controller_id}},
+        "metadata": {"name": "solver-controller", "labels": {"solver_controller_id": "solver-controller"}},
         "spec": {
             "type": "LoadBalancer",
-            "selector": {"solver_controller_id": solver_controller_id},
+            "selector": {"solver_controller_id": "solver-controller"},
             "ports": [
                 {
                     "port": Config.SolverController.SERVICE_PORT,

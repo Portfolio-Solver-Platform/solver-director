@@ -23,6 +23,8 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: solver-director
+      imagePullSecrets:
+      - name: harbor-creds
 
       securityContext:
         runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
