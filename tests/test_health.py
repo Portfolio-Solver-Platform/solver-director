@@ -6,7 +6,7 @@ def test_health_endpoint(client):
     assert data["status"] == "ok"
 
 
-def test_ready_endpoint(client, monkeypatch):
+def test_ready_endpoint(client):
     """Test the ready endpoint"""
     # fake_response = assume_keycloak_ready_state(monkeypatch, True)
 

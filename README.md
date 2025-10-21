@@ -6,3 +6,7 @@ You can manually update dependencies by:
 pip-compile pyproject.toml -o requirements.txt --strip-extras
 pip-compile pyproject.toml --extra dev -o requirements-dev.txt --strip-extras
 ```
+
+
+# TODO:
+- add user permissions to endpoints

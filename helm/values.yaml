@@ -4,6 +4,19 @@ imagePullPolicy: IfNotPresent
 
 revisionHistoryLimit: 2
 
+app:
+  debug: true  # Enable auto-creation of database tables in development
+
+migration:
+  backoffLimit: 3
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
 
 updateStrategy:
   type: RollingUpdate

@@ -3,7 +3,6 @@ from fastapi import HTTPException
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from src.spawner.status_service import is_user_limit_reached
-from src.model.challenge_status import SolverControllerStatus
 from src.spawner.util.util_service import generate_solver_controller_id
 
 from src.config import Config

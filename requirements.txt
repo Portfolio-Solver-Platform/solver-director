@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements.txt --strip-extras pyproject.toml
 #
+alembic==1.16.5
+    # via solver-director (pyproject.toml)
 annotated-types==0.7.0
     # via pydantic
 anyio==4.11.0
@@ -65,18 +67,20 @@ idna==3.10
     #   requests
 jinja2==3.1.6
     # via fastapi
-kubernetes==33.1.0
+kubernetes==34.1.0
     # via solver-director (pyproject.toml)
+mako==1.3.10
+    # via alembic
 markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.2
-    # via jinja2
+    # via
+    #   jinja2
+    #   mako
 mdurl==0.1.2
     # via markdown-it-py
 oauthlib==3.3.1
-    # via
-    #   kubernetes
-    #   requests-oauthlib
+    # via requests-oauthlib
 packaging==25.0
     # via gunicorn
 prometheus-client==0.22.1
@@ -138,6 +142,10 @@ six==1.17.0
     #   python-dateutil
 sniffio==1.3.1
     # via anyio
+sqlalchemy==2.0.43
+    # via
+    #   alembic
+    #   solver-director (pyproject.toml)
 starlette==0.48.0
     # via
     #   fastapi
@@ -148,15 +156,17 @@ typer==0.19.2
     #   fastapi-cloud-cli
 typing-extensions==4.15.0
     # via
+    #   alembic
     #   fastapi
     #   pydantic
     #   pydantic-core
     #   rich-toolkit
+    #   sqlalchemy
     #   typer
     #   typing-inspection
 typing-inspection==0.4.1
     # via pydantic
-urllib3==2.5.0
+urllib3==2.3.0
     # via
     #   kubernetes
     #   requests
