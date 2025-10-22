@@ -3,7 +3,6 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from io import BytesIO
 
 from src.database import get_db
 from src.models import Problem, Group
@@ -29,22 +28,29 @@ async def upload_problem(
     name: str = Form(...),
     group_id: int = Form(...),
     file: UploadFile = File(None, description="File must be in bytes"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """Upload a new problem with optional file.
 
     If file is provided: instances are NOT self-contained (need problem file)
     If no file: instances ARE self-contained (contain everything)
     """
-    if name.strip() == "":
+    name = name.strip()
+    if name == "":
         raise HTTPException(status_code=422, detail="Invalid name")
 
-    
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    if file: # if file is provided
+    # Check if problem with same name already exists
+    existing = db.query(Problem).filter(Problem.name == name).first()
+    if existing:
+        raise HTTPException(
+            status_code=400, detail="Problem with this name already exists"
+        )
+
+    if file:  # if file is provided
         file_data = await file.read()
         if not file_data:
             raise HTTPException(status_code=422, detail="File cannot be empty")
@@ -56,7 +62,7 @@ async def upload_problem(
             content_type=file.content_type,
             file_size=len(file_data),
             is_instances_self_contained=False,
-            group_id=group_id
+            group_id=group_id,
         )
     else:
         problem = Problem(
@@ -65,8 +71,8 @@ async def upload_problem(
             file_data=None,
             content_type=None,
             file_size=None,
-            is_instances_self_contained=True,  
-            group_id=group_id
+            is_instances_self_contained=True,
+            group_id=group_id,
         )
 
     db.add(problem)
@@ -77,16 +83,20 @@ async def upload_problem(
 
 
 @router.get("/problems", response_model=list[ProblemResponse])
-def get_problems(group_id: int, db: Session = Depends(get_db)):
-    """Get all problems for a specific group"""
-    # Verify group exists
-    group = db.query(Group).filter(Group.id == group_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
+def get_problems(group_id: int | None = None, db: Session = Depends(get_db)):
+    """Get all problems, optionally filtered by group_id"""
+    query = db.query(Problem)
 
-    # Get all problems for this group
-    problems = db.query(Problem).filter(Problem.group_id == group_id).all()
-    return problems
+    if group_id is not None:
+        # Verify group exists
+        group = db.query(Group).filter(Group.id == group_id).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+
+        # Filter by group
+        query = query.filter(Problem.group_id == group_id)
+
+    return query.all()
 
 
 @router.get("/problems/{id}", response_model=ProblemResponse)
@@ -108,13 +118,11 @@ def download_problem(id: int, db: Session = Depends(get_db)):
     if not problem.file_data:
         raise HTTPException(
             status_code=404,
-            detail="No file uploaded for this problem (instances are self-contained)"
+            detail="No file uploaded for this problem (instances are self-contained)",
         )
 
     return Response(
         content=problem.file_data,
         media_type=problem.content_type or "application/octet-stream",
-        headers={
-            "Content-Disposition": f'attachment; filename="{problem.filename}"'
-        }
+        headers={"Content-Disposition": f'attachment; filename="{problem.filename}"'},
     )

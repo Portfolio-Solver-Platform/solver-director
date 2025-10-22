@@ -6,7 +6,6 @@ from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.database import Base, get_db
-from src import models  # Import models to register them with Base
 
 
 @pytest.fixture
@@ -41,6 +40,7 @@ def test_db():
 @pytest.fixture
 def client_with_db(test_db):
     """Test client with test database for database tests"""
+
     def override_get_db():
         try:
             yield test_db

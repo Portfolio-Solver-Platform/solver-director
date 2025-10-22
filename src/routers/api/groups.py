@@ -43,7 +43,9 @@ def create_group(group_data: GroupCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=422, detail="Group name cannot be empty")
     existing = db.query(Group).filter(Group.name == group_data.name).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Group with this name already exists")
+        raise HTTPException(
+            status_code=400, detail="Group with this name already exists"
+        )
 
     group = Group(**group_data.model_dump())
     db.add(group)

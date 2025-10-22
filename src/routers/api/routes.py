@@ -19,12 +19,13 @@ def get_harbor_credentials():
         kube_client = client.CoreV1Api()
 
         secret = kube_client.read_namespaced_secret(
-            name="harbor-creds",
-            namespace="psp"
+            name="harbor-creds", namespace="psp"
         )
 
         # Docker config secrets store credentials in .dockerconfigjson
-        docker_config_json = base64.b64decode(secret.data[".dockerconfigjson"]).decode("utf-8")
+        docker_config_json = base64.b64decode(secret.data[".dockerconfigjson"]).decode(
+            "utf-8"
+        )
         docker_config = json.loads(docker_config_json)
 
         # Extract credentials for harbor.local
@@ -36,7 +37,9 @@ def get_harbor_credentials():
 
         return username, password
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get Harbor credentials: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get Harbor credentials: {str(e)}"
+        )
 
 
 class StartResponse(BaseModel):
@@ -66,7 +69,9 @@ def get_status():
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Cannot connect to solver controller: {str(e)}")
+        raise HTTPException(
+            status_code=503, detail=f"Cannot connect to solver controller: {str(e)}"
+        )
 
 
 @router.get("/solvers", response_model=SolversResponse, summary="Get available solvers")
@@ -86,10 +91,11 @@ def get_solvers():
 
         return SolversResponse(solvers=solvers)
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Failed to fetch solvers from Harbor: {str(e)}") 
-    
-    
+        raise HTTPException(
+            status_code=503, detail=f"Failed to fetch solvers from Harbor: {str(e)}"
+        )
+
+
 @router.post("/solvers")
 def post_solvers():
     """Upload new solvers"""
-    

@@ -37,7 +37,7 @@ email-validator==2.3.0
     # via
     #   fastapi
     #   pydantic
-fastapi==0.117.1
+fastapi==0.119.1
     # via solver-director (pyproject.toml)
 fastapi-cli==0.0.13
     # via fastapi
@@ -87,7 +87,7 @@ prometheus-client==0.22.1
     # via prometheus-fastapi-instrumentator
 prometheus-fastapi-instrumentator==7.1.0
     # via solver-director (pyproject.toml)
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.11
     # via solver-director (pyproject.toml)
 pyasn1==0.6.1
     # via
@@ -142,7 +142,7 @@ six==1.17.0
     #   python-dateutil
 sniffio==1.3.1
     # via anyio
-sqlalchemy==2.0.43
+sqlalchemy==2.0.44
     # via
     #   alembic
     #   solver-director (pyproject.toml)

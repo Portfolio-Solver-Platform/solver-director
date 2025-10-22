@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models and Base
 from src.database import Base
-from src import models  # This imports all models so they're registered with Base
+from src import models  # Import models to register them with Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

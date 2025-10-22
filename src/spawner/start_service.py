@@ -18,7 +18,7 @@ def start_solver_controller(user_id):
         )
     config.load_incluster_config()  # This tells it to use the mounted service account
     kube_client = client.CoreV1Api()
-    
+
     namespace_manifest = {
         "apiVersion": "v1",
         "kind": "Namespace",
@@ -28,27 +28,25 @@ def start_solver_controller(user_id):
         kube_client.create_namespace(body=namespace_manifest)
     except ApiException as e:
         if e.status == 409:
-            pass # already exists
+            pass  # already exists
         else:
             raise
-    
-            
+
     template_secret = kube_client.read_namespaced_secret(
-        name="harbor-creds",
-        namespace="psp"
+        name="harbor-creds", namespace="psp"
     )
 
     new_secret = client.V1Secret(
         metadata=client.V1ObjectMeta(
-            name="harbor-creds",
-            namespace=solver_controller_id
+            name="harbor-creds", namespace=solver_controller_id
         ),
         type=template_secret.type,
-        data=template_secret.data
+        data=template_secret.data,
     )
-    
-    kube_client.create_namespaced_secret(namespace=solver_controller_id, body=new_secret)
 
+    kube_client.create_namespaced_secret(
+        namespace=solver_controller_id, body=new_secret
+    )
 
     _ = kube_client.create_namespaced_pod(
         namespace=solver_controller_id, body=create_pod_manifest(solver_controller_id)
@@ -70,9 +68,7 @@ def create_pod_manifest(solver_controller_id):
             "labels": {"solver_controller_id": "solver-controller"},
         },
         "spec": {
-            "imagePullSecrets": [
-                {"name": "harbor-creds"}
-            ],
+            "imagePullSecrets": [{"name": "harbor-creds"}],
             "containers": [
                 {
                     "name": "solver-controller",
@@ -81,7 +77,7 @@ def create_pod_manifest(solver_controller_id):
                         {"containerPort": Config.SolverController.CONTAINER_PORT}
                     ],
                 }
-            ]
+            ],
         },
     }
 
@@ -90,7 +86,10 @@ def create_service_manifest(solver_controller_id):
     return {
         "apiVersion": "v1",
         "kind": "Service",
-        "metadata": {"name": "solver-controller", "labels": {"solver_controller_id": "solver-controller"}},
+        "metadata": {
+            "name": "solver-controller",
+            "labels": {"solver_controller_id": "solver-controller"},
+        },
         "spec": {
             "type": "LoadBalancer",
             "selector": {"solver_controller_id": "solver-controller"},
@@ -120,54 +119,51 @@ def create_service_manifest(solver_controller_id):
 
 def create_rbac_manifests(solver_controller_id):
     """Create service account and role binding for the specific namespace"""
-    
+
     # Service Account
     service_account = {
         "apiVersion": "v1",
         "kind": "ServiceAccount",
-        "metadata": {
-            "name": "solver-controller",
-            "namespace": solver_controller_id
-        }
+        "metadata": {"name": "solver-controller", "namespace": solver_controller_id},
     }
-    
+
     # Role (namespace-scoped permissions)
     role = {
         "apiVersion": "rbac.authorization.k8s.io/v1",
         "kind": "Role",
         "metadata": {
             "name": "solver-controller-role",
-            "namespace": solver_controller_id
+            "namespace": solver_controller_id,
         },
         "rules": [
             {
                 "apiGroups": [""],
                 "resources": ["pods", "services"],
-                "verbs": ["get", "list", "create", "delete", "watch"]
+                "verbs": ["get", "list", "create", "delete", "watch"],
             }
-        ]
+        ],
     }
-    
+
     # Role Binding
     role_binding = {
         "apiVersion": "rbac.authorization.k8s.io/v1",
         "kind": "RoleBinding",
         "metadata": {
             "name": "solver-controller-binding",
-            "namespace": solver_controller_id
+            "namespace": solver_controller_id,
         },
         "roleRef": {
             "apiGroup": "rbac.authorization.k8s.io",
             "kind": "Role",
-            "name": "solver-controller-role"
+            "name": "solver-controller-role",
         },
         "subjects": [
             {
                 "kind": "ServiceAccount",
                 "name": "solver-controller",
-                "namespace": solver_controller_id
+                "namespace": solver_controller_id,
             }
-        ]
+        ],
     }
-    
+
     return service_account, role, role_binding

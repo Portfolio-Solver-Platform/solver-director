@@ -1,4 +1,5 @@
 """Tests for problems API endpoints"""
+
 from io import BytesIO
 
 
@@ -7,7 +8,7 @@ def test_upload_problem(client_with_db):
 
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
@@ -15,7 +16,7 @@ def test_upload_problem(client_with_db):
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Test Problem", "group_id": group_id},
-        files={"file": ("problem.txt", BytesIO(file_content), "text/plain")}
+        files={"file": ("problem.txt", BytesIO(file_content), "text/plain")},
     )
 
     assert response.status_code == 201
@@ -35,14 +36,14 @@ def test_get_problem_metadata(client_with_db):
 
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     upload_response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Metadata Test", "group_id": group_id},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     problem_id = upload_response.json()["id"]
 
@@ -62,7 +63,7 @@ def test_download_problem_file(client_with_db):
     # Create group and upload problem
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
@@ -70,16 +71,20 @@ def test_download_problem_file(client_with_db):
     upload_response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Download Test", "group_id": group_id},
-        files={"file": ("download.txt", BytesIO(file_content), "text/plain")}
+        files={"file": ("download.txt", BytesIO(file_content), "text/plain")},
     )
     problem_id = upload_response.json()["id"]
 
     # Download file
-    response = client_with_db.get(f"/api/solverdirector/v1/problems/{problem_id}/download")
+    response = client_with_db.get(
+        f"/api/solverdirector/v1/problems/{problem_id}/download"
+    )
     assert response.status_code == 200
     assert response.content == file_content
     assert response.headers["content-type"].startswith("text/plain")
-    assert 'attachment; filename="download.txt"' in response.headers["content-disposition"]
+    assert (
+        'attachment; filename="download.txt"' in response.headers["content-disposition"]
+    )
 
 
 def test_upload_problem_invalid_group(client_with_db):
@@ -87,7 +92,7 @@ def test_upload_problem_invalid_group(client_with_db):
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Invalid Group", "group_id": 99999},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
@@ -98,14 +103,14 @@ def test_upload_problem_no_file(client_with_db):
     # Create group
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Upload without file - should succeed (self-contained)
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
-        data={"name": "Self-Contained Problem", "group_id": group_id}
+        data={"name": "Self-Contained Problem", "group_id": group_id},
     )
     assert response.status_code == 201
     data = response.json()
@@ -120,7 +125,7 @@ def test_upload_problem_empty_file(client_with_db):
     # Create group
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
@@ -128,7 +133,7 @@ def test_upload_problem_empty_file(client_with_db):
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Empty File", "group_id": group_id},
-        files={"file": ("empty.txt", BytesIO(b""), "text/plain")}
+        files={"file": ("empty.txt", BytesIO(b""), "text/plain")},
     )
     assert response.status_code == 422
     assert "empty" in response.json()["detail"].lower()
@@ -151,19 +156,21 @@ def test_download_self_contained_problem(client_with_db):
     # Create group
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Upload problem without file (self-contained)
     upload_response = client_with_db.post(
         "/api/solverdirector/v1/problems",
-        data={"name": "Self-Contained", "group_id": group_id}
+        data={"name": "Self-Contained", "group_id": group_id},
     )
     problem_id = upload_response.json()["id"]
 
     # Try to download - should fail with 404
-    response = client_with_db.get(f"/api/solverdirector/v1/problems/{problem_id}/download")
+    response = client_with_db.get(
+        f"/api/solverdirector/v1/problems/{problem_id}/download"
+    )
     assert response.status_code == 404
     assert "self-contained" in response.json()["detail"].lower()
 
@@ -173,14 +180,14 @@ def test_upload_problem_empty_name(client_with_db):
     """Test uploading problem with empty name fails"""
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "", "group_id": group_id},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     assert response.status_code == 422
     assert "name" in response.json()["detail"].lower()
@@ -190,14 +197,14 @@ def test_upload_problem_whitespace_name(client_with_db):
     """Test uploading problem with whitespace-only name fails"""
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "   ", "group_id": group_id},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     assert response.status_code == 422
     assert "name" in response.json()["detail"].lower()
@@ -207,14 +214,14 @@ def test_upload_problem_missing_name(client_with_db):
     """Test uploading problem without name fails"""
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"group_id": group_id},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     assert response.status_code == 422
 
@@ -224,7 +231,7 @@ def test_upload_problem_missing_group_id(client_with_db):
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Test Problem"},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     assert response.status_code == 422
 
@@ -234,7 +241,7 @@ def test_upload_problem_invalid_group_id_type(client_with_db):
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Test Problem", "group_id": "not-a-number"},
-        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")}
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
     )
     assert response.status_code == 422
 
@@ -244,7 +251,7 @@ def test_get_problems_by_group(client_with_db):
     # Create group
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "test-group", "description": "Test"}
+        json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
@@ -252,15 +259,17 @@ def test_get_problems_by_group(client_with_db):
     client_with_db.post(
         "/api/solverdirector/v1/problems",
         data={"name": "Problem 1", "group_id": group_id},
-        files={"file": ("p1.txt", BytesIO(b"content1"), "text/plain")}
+        files={"file": ("p1.txt", BytesIO(b"content1"), "text/plain")},
     )
     client_with_db.post(
         "/api/solverdirector/v1/problems",
-        data={"name": "Problem 2", "group_id": group_id}
+        data={"name": "Problem 2", "group_id": group_id},
     )
 
     # Get all problems for group
-    response = client_with_db.get(f"/api/solverdirector/v1/problems?group_id={group_id}")
+    response = client_with_db.get(
+        f"/api/solverdirector/v1/problems?group_id={group_id}"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -282,12 +291,14 @@ def test_get_problems_empty_group(client_with_db):
     # Create empty group
     group_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "empty-group", "description": "Test"}
+        json={"name": "empty-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Get problems - should be empty
-    response = client_with_db.get(f"/api/solverdirector/v1/problems?group_id={group_id}")
+    response = client_with_db.get(
+        f"/api/solverdirector/v1/problems?group_id={group_id}"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 0
@@ -298,30 +309,97 @@ def test_get_problems_multiple_groups(client_with_db):
     # Create two groups
     group1_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "group1", "description": "Group 1"}
+        json={"name": "group1", "description": "Group 1"},
     )
     group1_id = group1_response.json()["id"]
 
     group2_response = client_with_db.post(
         "/api/solverdirector/v1/groups",
-        json={"name": "group2", "description": "Group 2"}
+        json={"name": "group2", "description": "Group 2"},
     )
     group2_id = group2_response.json()["id"]
 
     # Add problems to both groups
     client_with_db.post(
         "/api/solverdirector/v1/problems",
-        data={"name": "Group1 Problem", "group_id": group1_id}
+        data={"name": "Group1 Problem", "group_id": group1_id},
     )
     client_with_db.post(
         "/api/solverdirector/v1/problems",
-        data={"name": "Group2 Problem", "group_id": group2_id}
+        data={"name": "Group2 Problem", "group_id": group2_id},
     )
 
     # Get problems for group1 - should only have 1
-    response = client_with_db.get(f"/api/solverdirector/v1/problems?group_id={group1_id}")
+    response = client_with_db.get(
+        f"/api/solverdirector/v1/problems?group_id={group1_id}"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
     assert data[0]["name"] == "Group1 Problem"
     assert data[0]["group_id"] == group1_id
+
+
+def test_get_all_problems(client_with_db):
+    """Test getting all problems without filtering by group"""
+    # Create two groups
+    group1_response = client_with_db.post(
+        "/api/solverdirector/v1/groups",
+        json={"name": "group1", "description": "Group 1"},
+    )
+    group1_id = group1_response.json()["id"]
+
+    group2_response = client_with_db.post(
+        "/api/solverdirector/v1/groups",
+        json={"name": "group2", "description": "Group 2"},
+    )
+    group2_id = group2_response.json()["id"]
+
+    # Add problems to both groups
+    client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        data={"name": "Group1 Problem", "group_id": group1_id},
+    )
+    client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        data={"name": "Group2 Problem 1", "group_id": group2_id},
+    )
+    client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        data={"name": "Group2 Problem 2", "group_id": group2_id},
+    )
+
+    # Get all problems without filtering - should have all 3
+    response = client_with_db.get("/api/solverdirector/v1/problems")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 3
+    problem_names = {p["name"] for p in data}
+    assert problem_names == {"Group1 Problem", "Group2 Problem 1", "Group2 Problem 2"}
+
+
+def test_upload_duplicate_problem(client_with_db):
+    """Test uploading problem with duplicate name fails"""
+    # Create group
+    group_response = client_with_db.post(
+        "/api/solverdirector/v1/groups",
+        json={"name": "test-group", "description": "Test"},
+    )
+    group_id = group_response.json()["id"]
+
+    # Upload first problem
+    response1 = client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        data={"name": "Duplicate Problem", "group_id": group_id},
+        files={"file": ("test.txt", BytesIO(b"content"), "text/plain")},
+    )
+    assert response1.status_code == 201
+
+    # Try to upload problem with same name - should fail
+    response2 = client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        data={"name": "Duplicate Problem", "group_id": group_id},
+        files={"file": ("test2.txt", BytesIO(b"content2"), "text/plain")},
+    )
+    assert response2.status_code == 400
+    assert "already exists" in response2.json()["detail"].lower()
