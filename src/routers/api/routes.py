@@ -63,7 +63,6 @@ def get_status():
     user_id = "sofus"
     namespace = generate_solver_controller_id(user_id)
     url = f"http://{Config.SolverController.SVC_NAME}.{namespace}.svc.cluster.local:{Config.SolverController.SERVICE_PORT}/v1/status"
-    print(url)
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
