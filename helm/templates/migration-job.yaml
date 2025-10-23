@@ -1,0 +1,48 @@
+{{- if not .Values.app.debug }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "service.fullname" . }}-migration-{{ .Release.Revision }}
+  labels:
+    app.kubernetes.io/name: {{ include "service.name" . }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "service.name" . }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      serviceAccountName: solver-director
+      securityContext:
+        runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
+        seccompProfile:
+          type: {{ .Values.podSecurityContext.seccompProfile.type }}
+      containers:
+        - name: alembic-migration
+          image: {{ required "image should be set by skaffold which it is not" .Values.image }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          command: ["alembic", "upgrade", "head"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # Alembic needs to write temp files
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgres.database.user }}:{{ .Values.postgres.database.password }}@{{ .Values.postgres.service.name }}:{{ .Values.postgres.service.port }}/{{ .Values.postgres.database.name }}"
+          resources:
+            requests:
+              cpu: {{ .Values.migration.resources.requests.cpu }}
+              memory: {{ .Values.migration.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.migration.resources.limits.cpu }}
+              memory: {{ .Values.migration.resources.limits.memory }}
+{{- end }}

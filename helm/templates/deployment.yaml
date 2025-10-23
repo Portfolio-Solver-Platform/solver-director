@@ -22,6 +22,10 @@ spec:
         app.kubernetes.io/name: {{ include "service.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      serviceAccountName: solver-director
+      imagePullSecrets:
+      - name: harbor-creds
+
       securityContext:
         runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
         seccompProfile:
@@ -64,6 +68,8 @@ spec:
               cpu: {{ .Values.resources.limits.cpu }}
               memory: {{ .Values.resources.limits.memory }}  
           env:
+            - name: DEBUG
+              value: {{ .Values.app.debug | default "false" | quote }}
             - name: DB_HOST
               value: {{ .Values.postgres.service.name | quote }}
             - name: DB_PORT
@@ -74,6 +80,8 @@ spec:
               value: {{ .Values.postgres.database.user | quote }}
             - name: DB_PASSWORD
               value: {{ .Values.postgres.database.password | quote }}
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgres.database.user }}:{{ .Values.postgres.database.password }}@{{ .Values.postgres.service.name }}:{{ .Values.postgres.service.port }}/{{ .Values.postgres.database.name }}"
 
       volumes:
         - name: tmp
