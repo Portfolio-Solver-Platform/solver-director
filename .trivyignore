@@ -1,5 +1,0 @@
-# Trivy ignore file for false positive detections
-
-# False positive: Google Auth library contains test/example RSA keys in code
-# These are not actual secrets but example keys used for testing
-/home/appuser/.local/lib/python3.13/site-packages/google/auth/crypt/__pycache__/_python_rsa.cpython-313.pyc

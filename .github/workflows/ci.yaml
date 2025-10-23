@@ -60,6 +60,7 @@ jobs:
           vuln-type: "os,library"
           ignore-unfixed: false
           cache-dir: .trivycache
+          skip-files: "**/google/auth/crypt/__pycache__/**"
 
       # # Always run this to surface actionable LOW/MEDIUM (fixed only), but never fail
       # - name: Trivy scan (image) — advisory LOW/MEDIUM (fixed only)
