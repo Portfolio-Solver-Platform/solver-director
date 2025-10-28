@@ -26,10 +26,10 @@ def get_groups(db: Session = Depends(get_db)):
     return db.query(Group).all()
 
 
-@router.get("/groups/{id}", response_model=GroupResponse)
-def get_group(id: int, db: Session = Depends(get_db)):
+@router.get("/groups/{group_id}", response_model=GroupResponse)
+def get_group(group_id: int, db: Session = Depends(get_db)):
     """Get a specific group"""
-    group = db.query(Group).filter(Group.id == id).first()
+    group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     return group
@@ -54,10 +54,10 @@ def create_group(group_data: GroupCreate, db: Session = Depends(get_db)):
     return group
 
 
-@router.delete("/groups/{id}", status_code=204)
-def delete_group(id: int, db: Session = Depends(get_db)):
+@router.delete("/groups/{group_id}", status_code=204)
+def delete_group(group_id: int, db: Session = Depends(get_db)):
     """Delete a group and all associated problems and instances"""
-    group = db.query(Group).filter(Group.id == id).first()
+    group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
