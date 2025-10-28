@@ -50,28 +50,6 @@ class SolversResponse(BaseModel):
     solvers: list[str] = Field(..., description="List of available solver names")
 
 
-@router.get("/start", response_model=StartResponse, summary="Starts solving instances")
-def start_route():
-    """ """
-    user_id = "sofus"
-    id = start_solver_controller(user_id)
-    return StartResponse(project_id=id)
-
-
-@router.get("/status")
-def get_status():
-    user_id = "sofus"
-    namespace = generate_solver_controller_id(user_id)
-    url = f"http://{Config.SolverController.SVC_NAME}.{namespace}.svc.cluster.local:{Config.SolverController.SERVICE_PORT}/v1/status"
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        raise HTTPException(
-            status_code=503, detail=f"Cannot connect to solver controller: {str(e)}"
-        )
-
 
 @router.get("/solvers", response_model=SolversResponse, summary="Get available solvers")
 def get_solvers():

@@ -29,6 +29,23 @@ solver_supported_groups = Table(
     ),
 )
 
+problem_groups = Table(
+    "problem_groups",
+    Base.metadata,
+    Column(
+        "problem_id",
+        Integer,
+        ForeignKey("problems.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "group_id",
+        Integer,
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
 
 class SolverImage(Base):
     __tablename__ = "solver_images"
@@ -45,9 +62,7 @@ class Group(Base):
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
 
-    problems = relationship(
-        "Problem", back_populates="group", cascade="all, delete-orphan"
-    )
+    problems = relationship("Problem", secondary=problem_groups, back_populates="groups")
     solvers = relationship(
         "Solver", secondary=solver_supported_groups, back_populates="supported_groups"
     )
@@ -79,11 +94,8 @@ class Problem(Base):
     file_size = Column(Integer, nullable=True)
     is_instances_self_contained = Column(Boolean, nullable=False)
     uploaded_at = Column(DateTime, nullable=False, server_default=func.now())
-    group_id = Column(
-        Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False
-    )
 
-    group = relationship("Group", back_populates="problems")
+    groups = relationship("Group", secondary=problem_groups, back_populates="problems")
     instances = relationship(
         "Instance", back_populates="problem", cascade="all, delete-orphan"
     )
@@ -105,3 +117,12 @@ class Instance(Base):
     problem = relationship("Problem", back_populates="instances")
 
     # problem, if group deleted, then all problems are also deleted
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False)
+    solver_controller_id = Column(String, nullable=False, unique=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())

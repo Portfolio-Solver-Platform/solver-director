@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
@@ -66,3 +67,51 @@ async def upload_instance(
     db.refresh(instance)
 
     return instance
+
+
+@router.get(
+    "/problems/{problem_id}/instances/{instance_id}", response_model=InstanceResponse
+)
+def get_instance(problem_id: int, instance_id: int, db: Session = Depends(get_db)):
+    """Get instance metadata"""
+    # Verify problem exists
+    problem = db.query(Problem).filter(Problem.id == problem_id).first()
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+
+    # Verify instance exists and belongs to the problem
+    instance = (
+        db.query(Instance)
+        .filter(Instance.id == instance_id, Instance.problem_id == problem_id)
+        .first()
+    )
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+
+    return instance
+
+
+@router.get("/problems/{problem_id}/instances/{instance_id}/file")
+def download_instance(
+    problem_id: int, instance_id: int, db: Session = Depends(get_db)
+):
+    """Download instance file"""
+    # Verify problem exists
+    problem = db.query(Problem).filter(Problem.id == problem_id).first()
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+
+    # Verify instance exists and belongs to the problem
+    instance = (
+        db.query(Instance)
+        .filter(Instance.id == instance_id, Instance.problem_id == problem_id)
+        .first()
+    )
+    if not instance:
+        raise HTTPException(status_code=404, detail="Instance not found")
+
+    return Response(
+        content=instance.file_data,
+        media_type=instance.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{instance.filename}"'},
+    )
