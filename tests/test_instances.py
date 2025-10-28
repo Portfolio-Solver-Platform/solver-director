@@ -325,7 +325,9 @@ def test_download_instance_file(client_with_db):
     assert response.status_code == 200
     assert response.content == file_content
     assert response.headers["content-type"].startswith("text/plain")
-    assert 'attachment; filename="download.dzn"' in response.headers["content-disposition"]
+    assert (
+        'attachment; filename="download.dzn"' in response.headers["content-disposition"]
+    )
 
 
 def test_download_nonexistent_instance(client_with_db):

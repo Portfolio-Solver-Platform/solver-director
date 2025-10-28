@@ -14,18 +14,18 @@ class ProblemCreateRequest(BaseModel):
     name: str
     group_ids: list[int]
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def validate_name(cls, v: str) -> str:
         if not v:
-            raise ValueError('Name cannot be empty')
+            raise ValueError("Name cannot be empty")
         return v
 
-    @field_validator('group_ids')
+    @field_validator("group_ids")
     @classmethod
     def validate_group_ids(cls, v: list[int]) -> list[int]:
         if not v:
-            raise ValueError('At least one group_id is required')
+            raise ValueError("At least one group_id is required")
         # Deduplicate while preserving order
         seen = set()
         return [gid for gid in v if not (gid in seen or seen.add(gid))]
@@ -35,22 +35,22 @@ class ProblemUpdateRequest(BaseModel):
     name: str | None = None
     group_ids: list[int] | None = None
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
         if v is None:
             return v
         if not v:
-            raise ValueError('Name cannot be empty')
+            raise ValueError("Name cannot be empty")
         return v
 
-    @field_validator('group_ids')
+    @field_validator("group_ids")
     @classmethod
     def validate_group_ids(cls, v: list[int] | None) -> list[int] | None:
         if v is None:
             return v
         if not v:
-            raise ValueError('At least one group_id is required')
+            raise ValueError("At least one group_id is required")
         # Deduplicate while preserving order
         seen = set()
         return [gid for gid in v if not (gid in seen or seen.add(gid))]
@@ -66,9 +66,9 @@ class ProblemResponse(BaseModel):
     file_size: int | None
     is_instances_self_contained: bool
     uploaded_at: datetime
-    groups: list = Field(serialization_alias='group_ids')
+    groups: list = Field(serialization_alias="group_ids")
 
-    @field_serializer('groups')
+    @field_serializer("groups")
     def serialize_groups(self, groups, _info):
         """Convert list of Group objects to list of group IDs"""
         return [group.id for group in groups]
@@ -94,9 +94,7 @@ def create_problem(
     if len(groups) != len(request.group_ids):
         found_ids = {g.id for g in groups}
         missing_ids = set(request.group_ids) - found_ids
-        raise HTTPException(
-            status_code=404, detail=f"Groups not found: {missing_ids}"
-        )
+        raise HTTPException(status_code=404, detail=f"Groups not found: {missing_ids}")
 
     # Check if problem with same name already exists
     existing = db.query(Problem).filter(Problem.name == normalized_name).first()

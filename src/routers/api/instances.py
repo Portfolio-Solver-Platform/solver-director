@@ -92,9 +92,7 @@ def get_instance(problem_id: int, instance_id: int, db: Session = Depends(get_db
 
 
 @router.get("/problems/{problem_id}/instances/{instance_id}/file")
-def download_instance(
-    problem_id: int, instance_id: int, db: Session = Depends(get_db)
-):
+def download_instance(problem_id: int, instance_id: int, db: Session = Depends(get_db)):
     """Download instance file"""
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()

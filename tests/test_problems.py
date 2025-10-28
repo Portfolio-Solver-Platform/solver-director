@@ -96,9 +96,7 @@ def test_download_problem_file(client_with_db):
     )
 
     # Download file
-    response = client_with_db.get(
-        f"/api/solverdirector/v1/problems/{problem_id}/file"
-    )
+    response = client_with_db.get(f"/api/solverdirector/v1/problems/{problem_id}/file")
     assert response.status_code == 200
     assert response.content == file_content
     assert response.headers["content-type"].startswith("text/plain")
@@ -193,9 +191,7 @@ def test_download_self_contained_problem(client_with_db):
     problem_id = create_response.json()["id"]
 
     # Try to download - should fail with 404
-    response = client_with_db.get(
-        f"/api/solverdirector/v1/problems/{problem_id}/file"
-    )
+    response = client_with_db.get(f"/api/solverdirector/v1/problems/{problem_id}/file")
     assert response.status_code == 404
     assert "self-contained" in response.json()["detail"].lower()
 
@@ -466,7 +462,10 @@ def test_upload_problem_with_multiple_groups(client_with_db):
     # Create problem with all three groups
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
-        json={"name": "Multi-Group Problem", "group_ids": [group1_id, group2_id, group3_id]},
+        json={
+            "name": "Multi-Group Problem",
+            "group_ids": [group1_id, group2_id, group3_id],
+        },
     )
     assert response.status_code == 201
     problem_id = response.json()["id"]
@@ -509,7 +508,10 @@ def test_upload_problem_with_duplicate_group_ids(client_with_db):
     # Create problem with duplicate group IDs
     response = client_with_db.post(
         "/api/solverdirector/v1/problems",
-        json={"name": "Duplicate Groups", "group_ids": [group1_id, group1_id, group2_id]},
+        json={
+            "name": "Duplicate Groups",
+            "group_ids": [group1_id, group1_id, group2_id],
+        },
     )
 
     assert response.status_code == 201
@@ -572,7 +574,9 @@ def test_problem_in_multiple_groups_query_filtering(client_with_db):
     problem_id = response.json()["id"]
 
     # Query by group1 - should include the problem
-    response1 = client_with_db.get(f"/api/solverdirector/v1/problems?group_id={group1_id}")
+    response1 = client_with_db.get(
+        f"/api/solverdirector/v1/problems?group_id={group1_id}"
+    )
     assert response1.status_code == 200
     problems1 = response1.json()
     assert len(problems1) == 1
@@ -580,7 +584,9 @@ def test_problem_in_multiple_groups_query_filtering(client_with_db):
     assert problems1[0]["name"] == "Shared Problem"
 
     # Query by group2 - should also include the problem
-    response2 = client_with_db.get(f"/api/solverdirector/v1/problems?group_id={group2_id}")
+    response2 = client_with_db.get(
+        f"/api/solverdirector/v1/problems?group_id={group2_id}"
+    )
     assert response2.status_code == 200
     problems2 = response2.json()
     assert len(problems2) == 1
@@ -612,11 +618,15 @@ def test_delete_group_keeps_problem(client_with_db):
     problem_id = response.json()["id"]
 
     # Delete group1
-    delete_response = client_with_db.delete(f"/api/solverdirector/v1/groups/{group1_id}")
+    delete_response = client_with_db.delete(
+        f"/api/solverdirector/v1/groups/{group1_id}"
+    )
     assert delete_response.status_code == 204
 
     # Problem should still exist
-    problem_response = client_with_db.get(f"/api/solverdirector/v1/problems/{problem_id}")
+    problem_response = client_with_db.get(
+        f"/api/solverdirector/v1/problems/{problem_id}"
+    )
     assert problem_response.status_code == 200
     problem_data = problem_response.json()
     assert problem_data["name"] == "Persistent Problem"
@@ -648,7 +658,10 @@ def test_get_problem_by_id_with_multiple_groups(client_with_db):
     # Create problem with all three groups
     create_response = client_with_db.post(
         "/api/solverdirector/v1/problems",
-        json={"name": "Multi-Group Query Test", "group_ids": [group1_id, group2_id, group3_id]},
+        json={
+            "name": "Multi-Group Query Test",
+            "group_ids": [group1_id, group2_id, group3_id],
+        },
     )
     problem_id = create_response.json()["id"]
 

@@ -62,7 +62,9 @@ class Group(Base):
     name = Column(String, nullable=False, unique=True)
     description = Column(String, nullable=True)
 
-    problems = relationship("Problem", secondary=problem_groups, back_populates="groups")
+    problems = relationship(
+        "Problem", secondary=problem_groups, back_populates="groups"
+    )
     solvers = relationship(
         "Solver", secondary=solver_supported_groups, back_populates="supported_groups"
     )

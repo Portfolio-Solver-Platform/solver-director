@@ -1,13 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from src.config import Config
-from src.spawner.start_service import start_solver_controller
 from pydantic import BaseModel, Field
 import requests
 import json
 import base64
 from kubernetes import client, config as k8s_config
 
-from src.spawner.util.util_service import generate_solver_controller_id
 
 router = APIRouter()
 
@@ -48,7 +45,6 @@ class StartResponse(BaseModel):
 
 class SolversResponse(BaseModel):
     solvers: list[str] = Field(..., description="List of available solver names")
-
 
 
 @router.get("/solvers", response_model=SolversResponse, summary="Get available solvers")
