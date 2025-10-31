@@ -386,3 +386,114 @@ def test_download_instance_wrong_problem(client_with_db):
         f"/api/solverdirector/v1/problems/{problem2_id}/instances/{instance_id}/file"
     )
     assert response.status_code == 404
+
+
+# DELETE /problems/{problem_id}/instances/{instance_id} tests
+def test_delete_instance_success(client_with_db):
+    """Test successfully deleting an instance"""
+    # Create group and problem
+    group_response = client_with_db.post(
+        "/api/solverdirector/v1/groups",
+        json={"name": "test-group", "description": "Test"},
+    )
+    group_id = group_response.json()["id"]
+
+    problem_response = client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        json={"name": "Test Problem", "group_ids": [group_id]},
+    )
+    problem_id = problem_response.json()["id"]
+
+    # Upload instance
+    instance_content = b"instance content"
+    upload_response = client_with_db.post(
+        f"/api/solverdirector/v1/problems/{problem_id}/instances",
+        files={"file": ("instance.dzn", BytesIO(instance_content), "text/plain")},
+    )
+    instance_id = upload_response.json()["id"]
+
+    # Delete instance
+    delete_response = client_with_db.delete(
+        f"/api/solverdirector/v1/problems/{problem_id}/instances/{instance_id}"
+    )
+    assert delete_response.status_code == 204
+
+    # Verify instance no longer exists
+    get_response = client_with_db.get(
+        f"/api/solverdirector/v1/problems/{problem_id}/instances/{instance_id}"
+    )
+    assert get_response.status_code == 404
+
+
+def test_delete_instance_wrong_problem(client_with_db):
+    """Test deleting instance with wrong problem_id fails"""
+    # Create group
+    group_response = client_with_db.post(
+        "/api/solverdirector/v1/groups",
+        json={"name": "test-group", "description": "Test"},
+    )
+    group_id = group_response.json()["id"]
+
+    # Create two problems
+    problem1_response = client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        json={"name": "Problem 1", "group_ids": [group_id]},
+    )
+    problem1_id = problem1_response.json()["id"]
+
+    problem2_response = client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        json={"name": "Problem 2", "group_ids": [group_id]},
+    )
+    problem2_id = problem2_response.json()["id"]
+
+    # Upload instance to problem 1
+    upload_response = client_with_db.post(
+        f"/api/solverdirector/v1/problems/{problem1_id}/instances",
+        files={"file": ("instance.dzn", BytesIO(b"content"), "text/plain")},
+    )
+    instance_id = upload_response.json()["id"]
+
+    # Try to delete instance using problem 2's ID - should fail
+    delete_response = client_with_db.delete(
+        f"/api/solverdirector/v1/problems/{problem2_id}/instances/{instance_id}"
+    )
+    assert delete_response.status_code == 404
+
+    # Verify instance still exists under problem 1
+    get_response = client_with_db.get(
+        f"/api/solverdirector/v1/problems/{problem1_id}/instances/{instance_id}"
+    )
+    assert get_response.status_code == 200
+
+
+def test_delete_nonexistent_instance(client_with_db):
+    """Test deleting a non-existent instance returns 404"""
+    # Create group and problem
+    group_response = client_with_db.post(
+        "/api/solverdirector/v1/groups",
+        json={"name": "test-group", "description": "Test"},
+    )
+    group_id = group_response.json()["id"]
+
+    problem_response = client_with_db.post(
+        "/api/solverdirector/v1/problems",
+        json={"name": "Test Problem", "group_ids": [group_id]},
+    )
+    problem_id = problem_response.json()["id"]
+
+    # Try to delete non-existent instance
+    delete_response = client_with_db.delete(
+        f"/api/solverdirector/v1/problems/{problem_id}/instances/99999"
+    )
+    assert delete_response.status_code == 404
+    assert "not found" in delete_response.json()["detail"].lower()
+
+
+def test_delete_instance_nonexistent_problem(client_with_db):
+    """Test deleting instance with non-existent problem returns 404"""
+    delete_response = client_with_db.delete(
+        "/api/solverdirector/v1/problems/99999/instances/1"
+    )
+    assert delete_response.status_code == 404
+    assert "not found" in delete_response.json()["detail"].lower()

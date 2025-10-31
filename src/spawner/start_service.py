@@ -33,7 +33,7 @@ def start_solver_controller(user_id):
             raise
 
     template_secret = kube_client.read_namespaced_secret(
-        name="harbor-creds", namespace="psp"
+        name="harbor-creds-pull", namespace="psp"
     )
 
     new_secret = client.V1Secret(

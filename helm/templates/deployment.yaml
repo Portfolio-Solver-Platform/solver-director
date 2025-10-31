@@ -24,7 +24,7 @@ spec:
     spec:
       serviceAccountName: solver-director
       imagePullSecrets:
-      - name: harbor-creds
+      - name: harbor-creds-pull
 
       securityContext:
         runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}

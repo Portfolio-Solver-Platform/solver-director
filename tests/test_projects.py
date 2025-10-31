@@ -38,6 +38,24 @@ def test_get_all_projects(client_with_db):
         assert data[0]["solver_controller_id"] == "controller-1"
         assert data[1]["solver_controller_id"] == "controller-2"
 
+# def test_get_all_projects(client_with_db, auth):
+#     """Test getting all projects"""
+#     token = auth.issue_token(MockToken(scopes=["projects:read"]))
+#     with patch("src.routers.api.projects.start_solver_controller") as mock_start:
+#         mock_start.side_effect = ["controller-1", "controller-2"]
+
+#         # Create two projects
+#         client_with_db.post("/api/solverdirector/v1/projects")
+#         client_with_db.post("/api/solverdirector/v1/projects")
+
+#         # Get all projects
+#         response = client_with_db.get("/api/solverdirector/v1/projects", headers=auth.auth_header(token))
+#         assert response.status_code == 200
+#         data = response.json()
+#         assert len(data) == 2
+#         assert data[0]["solver_controller_id"] == "controller-1"
+#         assert data[1]["solver_controller_id"] == "controller-2"
+
 
 def test_get_projects_by_user_id(client_with_db):
     """Test filtering projects by user_id"""
@@ -159,3 +177,63 @@ def test_get_project_status_connection_error(client_with_db):
             )
             assert response.status_code == 503
             assert "cannot connect" in response.json()["detail"].lower()
+
+
+# DELETE /projects/{project_id} tests
+def test_delete_project_success(client_with_db):
+    """Test successfully deleting a project"""
+    with patch("src.routers.api.projects.start_solver_controller") as mock_start:
+        mock_start.return_value = "controller-to-delete"
+
+        # Create project
+        create_response = client_with_db.post("/api/solverdirector/v1/projects")
+        project_id = create_response.json()["id"]
+
+        # Delete project
+        with patch("src.routers.api.projects.stop_solver_controller") as mock_stop:
+            delete_response = client_with_db.delete(
+                f"/api/solverdirector/v1/projects/{project_id}"
+            )
+            assert delete_response.status_code == 204
+
+            # Verify stop_solver_controller was called with correct namespace
+            mock_stop.assert_called_once_with("controller-to-delete")
+
+        # Verify project no longer exists
+        get_response = client_with_db.get(
+            f"/api/solverdirector/v1/projects/{project_id}"
+        )
+        assert get_response.status_code == 404
+
+
+def test_delete_nonexistent_project(client_with_db):
+    """Test deleting a non-existent project returns 404"""
+    delete_response = client_with_db.delete("/api/solverdirector/v1/projects/99999")
+    assert delete_response.status_code == 404
+    assert "not found" in delete_response.json()["detail"].lower()
+
+
+def test_delete_project_namespace_failure(client_with_db):
+    """Test that project is deleted even if namespace deletion fails"""
+    with patch("src.routers.api.projects.start_solver_controller") as mock_start:
+        mock_start.return_value = "controller-test"
+
+        # Create project
+        create_response = client_with_db.post("/api/solverdirector/v1/projects")
+        project_id = create_response.json()["id"]
+
+        # Delete project with namespace deletion failure
+        with patch("src.routers.api.projects.stop_solver_controller") as mock_stop:
+            mock_stop.side_effect = Exception("Namespace not found")
+
+            delete_response = client_with_db.delete(
+                f"/api/solverdirector/v1/projects/{project_id}"
+            )
+            # Should still succeed (204) even though namespace deletion failed
+            assert delete_response.status_code == 204
+
+        # Verify project was still deleted from database
+        get_response = client_with_db.get(
+            f"/api/solverdirector/v1/projects/{project_id}"
+        )
+        assert get_response.status_code == 404
