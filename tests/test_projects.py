@@ -38,6 +38,7 @@ def test_get_all_projects(client_with_db):
         assert data[0]["solver_controller_id"] == "controller-1"
         assert data[1]["solver_controller_id"] == "controller-2"
 
+
 # def test_get_all_projects(client_with_db, auth):
 #     """Test getting all projects"""
 #     token = auth.issue_token(MockToken(scopes=["projects:read"]))

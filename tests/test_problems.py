@@ -957,9 +957,7 @@ def test_delete_problem_success(client_with_db):
     assert delete_response.status_code == 204
 
     # Verify problem no longer exists
-    get_response = client_with_db.get(
-        f"/api/solverdirector/v1/problems/{problem_id}"
-    )
+    get_response = client_with_db.get(f"/api/solverdirector/v1/problems/{problem_id}")
     assert get_response.status_code == 404
 
 

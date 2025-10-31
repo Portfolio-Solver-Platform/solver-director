@@ -7,4 +7,3 @@ auth = FastAPIAuth(
         config=auth_config,
     ),
 )
-

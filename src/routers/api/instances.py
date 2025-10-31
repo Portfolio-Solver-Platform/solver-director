@@ -28,7 +28,9 @@ def get_instances(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Get all instances for this problem
     instances = db.query(Instance).filter(Instance.problem_id == problem_id).all()
@@ -36,7 +38,9 @@ def get_instances(problem_id: int, db: Annotated[Session, Depends(get_db)]):
 
 
 @router.post(
-    "/problems/{problem_id}/instances", response_model=InstanceResponse, status_code=status.HTTP_201_CREATED
+    "/problems/{problem_id}/instances",
+    response_model=InstanceResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 async def upload_instance(
     problem_id: int,
@@ -47,12 +51,17 @@ async def upload_instance(
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Read file data
     file_data = await file.read()
     if not file_data:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="File cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="File cannot be empty",
+        )
 
     # Create instance
     instance = Instance(
@@ -73,12 +82,16 @@ async def upload_instance(
 @router.get(
     "/problems/{problem_id}/instances/{instance_id}", response_model=InstanceResponse
 )
-def get_instance(problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]):
+def get_instance(
+    problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]
+):
     """Get instance metadata"""
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Verify instance exists and belongs to the problem
     instance = (
@@ -87,18 +100,24 @@ def get_instance(problem_id: int, instance_id: int, db: Annotated[Session, Depen
         .first()
     )
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     return instance
 
 
 @router.get("/problems/{problem_id}/instances/{instance_id}/file")
-def download_instance(problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]):
+def download_instance(
+    problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]
+):
     """Download instance file"""
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Verify instance exists and belongs to the problem
     instance = (
@@ -107,7 +126,9 @@ def download_instance(problem_id: int, instance_id: int, db: Annotated[Session, 
         .first()
     )
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     return Response(
         content=instance.file_data,
@@ -116,7 +137,10 @@ def download_instance(problem_id: int, instance_id: int, db: Annotated[Session, 
     )
 
 
-@router.delete("/problems/{problem_id}/instances/{instance_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/problems/{problem_id}/instances/{instance_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_instance(
     problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]
 ):
@@ -124,7 +148,9 @@ def delete_instance(
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Verify instance exists and belongs to the problem
     instance = (
@@ -133,7 +159,9 @@ def delete_instance(
         .first()
     )
     if not instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Instance not found"
+        )
 
     # Delete instance
     db.delete(instance)

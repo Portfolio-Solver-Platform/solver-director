@@ -1,4 +1,5 @@
 """Tests for groups API endpoints"""
+
 from src.models import Solver, SolverImage
 
 
@@ -254,7 +255,11 @@ def test_update_group_all_fields(client_with_db, test_db):
     # Update all fields
     update_response = client_with_db.patch(
         f"/api/solverdirector/v1/groups/{group_id}",
-        json={"name": "Updated", "description": "Updated Desc", "solver_ids": [solver.id]},
+        json={
+            "name": "Updated",
+            "description": "Updated Desc",
+            "solver_ids": [solver.id],
+        },
     )
     assert update_response.status_code == 200
     data = update_response.json()

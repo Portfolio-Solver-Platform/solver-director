@@ -75,7 +75,9 @@ class ProblemResponse(BaseModel):
         return [group.id for group in groups]
 
 
-@router.post("/problems", response_model=ProblemResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/problems", response_model=ProblemResponse, status_code=status.HTTP_201_CREATED
+)
 def create_problem(
     request: ProblemCreateRequest,
     db: Annotated[Session, Depends(get_db)],
@@ -88,20 +90,27 @@ def create_problem(
     normalized_name = request.name.strip()
 
     if normalized_name == "":
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Name cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Name cannot be empty",
+        )
 
     # Validate all groups exist
     groups = db.query(Group).filter(Group.id.in_(request.group_ids)).all()
     if len(groups) != len(request.group_ids):
         found_ids = {g.id for g in groups}
         missing_ids = set(request.group_ids) - found_ids
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Groups not found: {missing_ids}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Groups not found: {missing_ids}",
+        )
 
     # Check if problem with same name already exists
     existing = db.query(Problem).filter(Problem.name == normalized_name).first()
     if existing:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Problem with this name already exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Problem with this name already exists",
         )
 
     # Create problem without file (self-contained by default)
@@ -133,7 +142,9 @@ def get_problems(db: Annotated[Session, Depends(get_db)], group_id: int | None =
         # Verify group exists
         group = db.query(Group).filter(Group.id == group_id).first()
         if not group:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
+            )
 
         # Filter by group using join on many-to-many relationship
         query = query.join(Problem.groups).filter(Group.id == group_id)
@@ -146,7 +157,9 @@ def get_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     """Get problem metadata"""
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
     return problem
 
 
@@ -160,12 +173,15 @@ def update_problem(
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Check that at least one field is provided
     if request.name is None and request.group_ids is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="At least one field must be provided for update"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="At least one field must be provided for update",
         )
 
     # Update name if provided
@@ -174,7 +190,10 @@ def update_problem(
         normalized_name = request.name.strip()
 
         if normalized_name == "":
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Name cannot be empty")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Name cannot be empty",
+            )
 
         # Check if another problem with same name exists
         existing = (
@@ -184,7 +203,8 @@ def update_problem(
         )
         if existing:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Problem with this name already exists"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Problem with this name already exists",
             )
         problem.name = normalized_name
 
@@ -196,7 +216,8 @@ def update_problem(
             found_ids = {g.id for g in groups}
             missing_ids = set(request.group_ids) - found_ids
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Groups not found: {missing_ids}"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Groups not found: {missing_ids}",
             )
         problem.groups = groups
 
@@ -211,7 +232,9 @@ def download_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     """Download problem file"""
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     if not problem.file_data:
         raise HTTPException(
@@ -239,11 +262,16 @@ async def upload_problem_file(
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     file_data = await file.read()
     if not file_data:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="File cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="File cannot be empty",
+        )
 
     problem.filename = file.filename or "unknown"
     problem.file_data = file_data
@@ -263,7 +291,9 @@ def delete_problem(id: int, db: Annotated[Session, Depends(get_db)]):
     # Verify problem exists
     problem = db.query(Problem).filter(Problem.id == id).first()
     if not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
 
     # Delete problem (cascade handles instances and group associations)
     db.delete(problem)

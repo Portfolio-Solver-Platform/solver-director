@@ -18,16 +18,16 @@ class GroupUpdateRequest(BaseModel):
     description: str | None = None
     solver_ids: list[int] | None = None
 
-    @field_validator('name')
+    @field_validator("name")
     @classmethod
     def validate_name(cls, v: str | None) -> str | None:
         if v is None:
             return v
         if not v:
-            raise ValueError('Name cannot be empty')
+            raise ValueError("Name cannot be empty")
         return v
 
-    @field_validator('solver_ids')
+    @field_validator("solver_ids")
     @classmethod
     def validate_solver_ids(cls, v: list[int] | None) -> list[int] | None:
         if v is None:
@@ -44,9 +44,9 @@ class GroupResponse(BaseModel):
     id: int
     name: str
     description: str | None
-    solvers: list = Field(serialization_alias='solver_ids', default=[])
+    solvers: list = Field(serialization_alias="solver_ids", default=[])
 
-    @field_serializer('solvers')
+    @field_serializer("solvers")
     def serialize_solvers(self, solvers, _info):
         """Convert list of Solver objects to list of solver IDs"""
         return [solver.id for solver in solvers]
@@ -63,7 +63,9 @@ def get_group(group_id: int, db: Annotated[Session, Depends(get_db)]):
     """Get a specific group"""
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
+        )
     return group
 
 
@@ -77,13 +79,19 @@ def update_group(
     # Verify group exists
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
+        )
 
     # Check at least one field provided
-    if request.name is None and request.description is None and request.solver_ids is None:
+    if (
+        request.name is None
+        and request.description is None
+        and request.solver_ids is None
+    ):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="At least one field must be provided for update"
+            detail="At least one field must be provided for update",
         )
 
     # Update name if provided
@@ -91,7 +99,10 @@ def update_group(
         normalized_name = request.name.strip()
 
         if normalized_name == "":
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Name cannot be empty")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Name cannot be empty",
+            )
 
         # Check for duplicate
         existing = (
@@ -102,7 +113,7 @@ def update_group(
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Group with this name already exists"
+                detail="Group with this name already exists",
             )
         group.name = normalized_name
 
@@ -119,7 +130,7 @@ def update_group(
             missing_ids = set(request.solver_ids) - found_ids
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Solvers not found: {missing_ids}"
+                detail=f"Solvers not found: {missing_ids}",
             )
         group.solvers = solvers
 
@@ -129,16 +140,22 @@ def update_group(
     return group
 
 
-@router.post("/groups", response_model=GroupResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/groups", response_model=GroupResponse, status_code=status.HTTP_201_CREATED
+)
 def create_group(group_data: GroupCreate, db: Annotated[Session, Depends(get_db)]):
     """Create a new group"""
     # Check if group with same name already exists
     if group_data.name.strip() == "":
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Group name cannot be empty")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Group name cannot be empty",
+        )
     existing = db.query(Group).filter(Group.name == group_data.name).first()
     if existing:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Group with this name already exists"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Group with this name already exists",
         )
 
     group = Group(**group_data.model_dump())
@@ -153,7 +170,9 @@ def delete_group(group_id: int, db: Annotated[Session, Depends(get_db)]):
     """Delete a group and all associated problems and instances"""
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
+        )
 
     db.delete(group)
     db.commit()

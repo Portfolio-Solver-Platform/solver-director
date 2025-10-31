@@ -1,6 +1,5 @@
 from typing import Annotated
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, status
-from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
 import requests
@@ -32,9 +31,7 @@ def get_harbor_credentials(secret_name: str = "harbor-creds-push"):
         k8s_config.load_incluster_config()
         kube_client = client.CoreV1Api()
 
-        secret = kube_client.read_namespaced_secret(
-            name=secret_name, namespace="psp"
-        )
+        secret = kube_client.read_namespaced_secret(name=secret_name, namespace="psp")
 
         # Docker config secrets store credentials in .dockerconfigjson
         docker_config_json = base64.b64decode(secret.data[".dockerconfigjson"]).decode(
@@ -52,7 +49,8 @@ def get_harbor_credentials(secret_name: str = "harbor-creds-push"):
         return username, password
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get Harbor credentials: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get Harbor credentials: {str(e)}",
         )
 
 
@@ -79,7 +77,7 @@ class SolverResponse(BaseModel):
             id=solver.id,
             name=solver.name,
             solver_images_id=solver.solver_images_id,
-            image_path=solver.solver_image.image_path
+            image_path=solver.solver_image.image_path,
         )
 
 
@@ -101,11 +99,14 @@ def get_solvers():
         return SolversResponse(solvers=solvers)
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Failed to fetch solvers from Harbor: {str(e)}"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Failed to fetch solvers from Harbor: {str(e)}",
         )
 
 
-@router.post("/solvers", response_model=SolverResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/solvers", response_model=SolverResponse, status_code=status.HTTP_201_CREATED
+)
 async def upload_solver(
     name: Annotated[str, Form()],
     file: Annotated[UploadFile, File(description="Docker image tarball (.tar file)")],
@@ -125,7 +126,7 @@ async def upload_solver(
     if not normalized_name:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Solver name cannot be empty"
+            detail="Solver name cannot be empty",
         )
 
     # 2. Check for duplicate solver name
@@ -133,14 +134,13 @@ async def upload_solver(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Solver with name '{normalized_name}' already exists"
+            detail=f"Solver with name '{normalized_name}' already exists",
         )
 
     # 3. Validate file
     if not file:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="File is required"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="File is required"
         )
 
     # Read file data to check if empty
@@ -148,7 +148,7 @@ async def upload_solver(
     if not file_data:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="File cannot be empty"
+            detail="File cannot be empty",
         )
 
     # 4. Save tarball to temporary file
@@ -165,13 +165,17 @@ async def upload_solver(
         # Use REGISTRY_URL for internal cluster communication
         registry_image_name = f"{Config.Harbor.REGISTRY_URL}/{Config.Harbor.PROJECT}/{normalized_name}:latest"
         # Use URL for storing in database (external reference)
-        external_image_name = f"{Config.Harbor.URL}/{Config.Harbor.PROJECT}/{normalized_name}:latest"
+        external_image_name = (
+            f"{Config.Harbor.URL}/{Config.Harbor.PROJECT}/{normalized_name}:latest"
+        )
 
         skopeo_args = [
-            "skopeo", "copy",
+            "skopeo",
+            "copy",
             f"docker-archive:{tarball_path}",
             f"docker://{registry_image_name}",
-            "--dest-creds", f"{username}:{password}"
+            "--dest-creds",
+            f"{username}:{password}",
         ]
 
         # Add TLS verification flag
@@ -182,13 +186,13 @@ async def upload_solver(
             skopeo_args,
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=300,  # 5 minute timeout
         )
 
         if result.returncode != 0:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to push image to Harbor: {result.stderr}"
+                detail=f"Failed to push image to Harbor: {result.stderr}",
             )
 
         # 7. Create SolverImage record with external image path
@@ -197,10 +201,7 @@ async def upload_solver(
         db.flush()  # Get the ID without committing
 
         # 8. Create Solver record
-        solver = Solver(
-            name=normalized_name,
-            solver_images_id=solver_image.id
-        )
+        solver = Solver(name=normalized_name, solver_images_id=solver_image.id)
         db.add(solver)
         db.commit()
         db.refresh(solver)
@@ -212,7 +213,7 @@ async def upload_solver(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Image push timed out"
+            detail="Image push timed out",
         )
     except HTTPException:
         db.rollback()
@@ -221,7 +222,7 @@ async def upload_solver(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload solver: {str(e)}"
+            detail=f"Failed to upload solver: {str(e)}",
         )
     finally:
         # 10. Clean up temporary file

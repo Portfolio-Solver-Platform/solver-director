@@ -10,8 +10,8 @@ from src.models import Project
 from src.spawner.start_service import start_solver_controller
 from src.spawner.stop_service import stop_solver_controller
 from src.config import Config
-from src.auth import auth
-from psp_auth import User
+# from src.auth import auth
+# from psp_auth import User
 
 
 router = APIRouter()
@@ -30,7 +30,9 @@ class ProjectWithStatusResponse(ProjectResponse):
     status: Any
 
 
-@router.post("/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED
+)
 def create_project(db: Annotated[Session, Depends(get_db)]):
     """Create a new project and start a solver controller"""
     # TODO: Get user_id from authentication when implemented. Also make sure to implement tests for user_id handling.
@@ -93,13 +95,14 @@ def get_projects(db: Annotated[Session, Depends(get_db)], user_id: str | None = 
 #     return query.all()
 
 
-
 @router.get("/projects/{project_id}", response_model=ProjectWithStatusResponse)
 def get_project(project_id: int, db: Annotated[Session, Depends(get_db)]):
     """Get project by id with solver controller status"""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     # Build URL to solver controller's status endpoint
     url = f"http://{Config.SolverController.SVC_NAME}.{project.solver_controller_id}.svc.cluster.local:{Config.SolverController.SERVICE_PORT}/v1/status"
@@ -132,7 +135,9 @@ def delete_project(project_id: int, db: Annotated[Session, Depends(get_db)]):
     # Verify project exists
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
 
     # Delete the namespace (which deletes all services)
     try:

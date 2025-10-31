@@ -9,6 +9,7 @@ from src.database import Base, get_db
 from psp_auth.testing import MockAuth
 from src.auth import auth_config
 
+
 @pytest.fixture
 def client():
     """Simple test client for non-database tests"""
@@ -41,6 +42,7 @@ def test_db():
 @pytest.fixture
 def auth(monkeypatch):
     return MockAuth(auth_config.client_id, monkeypatch)
+
 
 @pytest.fixture
 def client_with_db(test_db):

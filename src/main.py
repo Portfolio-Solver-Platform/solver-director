@@ -8,6 +8,7 @@ from alembic.config import Config as AlembicConfig
 from alembic import command
 from .auth import auth
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup/shutdown"""

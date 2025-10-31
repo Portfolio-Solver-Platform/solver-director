@@ -33,6 +33,8 @@ class Config:
     class Harbor:
         URL = os.getenv("HARBOR_URL", "harbor.local")
         # Internal registry URL for skopeo (defaults to harbor-core service)
-        REGISTRY_URL = os.getenv("HARBOR_REGISTRY_URL", "harbor-core.harbor.svc.cluster.local")
+        REGISTRY_URL = os.getenv(
+            "HARBOR_REGISTRY_URL", "harbor-core.harbor.svc.cluster.local"
+        )
         PROJECT = "psp-solvers"
         TLS_VERIFY = os.getenv("HARBOR_TLS_VERIFY", "false") == "true"
