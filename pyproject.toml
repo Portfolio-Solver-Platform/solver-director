@@ -2,7 +2,7 @@
 name = "solver-director"
 version = "0.1.0"
 dependencies = [
-    "fastapi[standard]>=0.119.1,<0.120",
+    "fastapi[standard]>=0.120,<0.121",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0",
     "psycopg2-binary>=2.9.11,<3.0",
     "sqlalchemy>=2.0.44,<3.0",
@@ -17,6 +17,7 @@ dependencies = [
 dev = [
     "pytest>=8,<9",
     "pytest-cov>=7,<8",
+    "pytest-mock>=3.15,<4.0",
     "ruff>=0.14.1,<0.15.0",
     "bandit>=1.8,<2.0",
     "pip-audit>=2.9,<3.0",

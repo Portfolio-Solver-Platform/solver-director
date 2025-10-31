@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 import requests
+from prometheus_client import Counter
 
 from src.database import get_db
 from src.models import Project
@@ -15,6 +16,13 @@ from src.config import Config
 
 
 router = APIRouter()
+
+# Prometheus metrics
+namespace_cleanup_failures = Counter(
+    "solver_director_namespace_cleanup_failures_total",
+    "Total number of namespace cleanup failures during project deletion",
+    ["operation"],
+)
 
 
 class ProjectResponse(BaseModel):
@@ -139,12 +147,14 @@ def delete_project(project_id: int, db: Annotated[Session, Depends(get_db)]):
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
 
-    # Delete the namespace (which deletes all services)
+    # Try to stop solver controller, but continue even if it fails
+    # (e.g., namespace might already be deleted)
     try:
         stop_solver_controller(project.solver_controller_id)
-    except Exception as _:
-        # Log error but continue with DB deletion
-        # Namespace might already be deleted or not exist
+    except Exception:
+        # Log the error but don't fail the deletion
+        # The namespace might already be deleted or unavailable
+        namespace_cleanup_failures.labels(operation="project_deletion").inc()
         pass
 
     # Delete project from database

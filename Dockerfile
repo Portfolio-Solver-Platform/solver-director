@@ -28,7 +28,7 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 
 FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt
-RUN pip install git+https://github.com/Portfolio-Solver-Platform/python-auth-lib@791ce2d
+RUN pip install git+https://github.com/Portfolio-Solver-Platform/python-auth-lib@da7ea18
 
 COPY pyproject.toml .
 COPY alembic.ini .
@@ -41,7 +41,7 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.work
 
 FROM base AS runtime
 RUN pip install --no-cache-dir --user -r requirements.txt
-RUN pip install git+https://github.com/Portfolio-Solver-Platform/python-auth-lib@791ce2d
+RUN pip install git+https://github.com/Portfolio-Solver-Platform/python-auth-lib@da7ea18
 
 COPY pyproject.toml .
 COPY alembic.ini .

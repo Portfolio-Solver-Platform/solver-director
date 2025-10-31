@@ -2,13 +2,15 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
+import asyncio
+import re
 import requests
 import json
 import base64
-import subprocess
 import tempfile
 import os
 from kubernetes import client, config as k8s_config
+from prometheus_client import Counter
 
 from src.database import get_db
 from src.models import Solver, SolverImage
@@ -17,8 +19,20 @@ from src.config import Config
 
 router = APIRouter()
 
+# Docker image name validation pattern
+# Must start with lowercase letter or digit, followed by lowercase alphanumeric, dots, hyphens, or underscores
+# Max length: 128 characters
+VALID_IMAGE_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
 
-def get_harbor_credentials(secret_name: str = "harbor-creds-push"):
+# Prometheus metrics
+temp_file_cleanup_failures = Counter(
+    "solver_director_temp_file_cleanup_failures_total",
+    "Total number of temporary file cleanup failures",
+    ["operation"],
+)
+
+
+def get_harbor_credentials(secret_name: str = "harbor-creds-push"):  # nosec B107
     """Reads Harbor credentials from a Kubernetes secret
 
     Args:
@@ -26,6 +40,10 @@ def get_harbor_credentials(secret_name: str = "harbor-creds-push"):
 
     Returns:
         Tuple of (username, password) for Harbor authentication
+
+    Note:
+        The default parameter is a Kubernetes secret name (resource identifier),
+        not a hardcoded password. Actual credentials are retrieved from K8s at runtime.
     """
     try:
         k8s_config.load_incluster_config()
@@ -43,7 +61,6 @@ def get_harbor_credentials(secret_name: str = "harbor-creds-push"):
         auth_config = docker_config.get("auths", {}).get("harbor.local", {})
         auth_string = auth_config.get("auth", "")
 
-        # Decode base64 encoded "username:password"
         username, password = base64.b64decode(auth_string).decode("utf-8").split(":", 1)
 
         return username, password
@@ -121,15 +138,21 @@ async def upload_solver(
     Returns:
         SolverResponse with solver metadata including Harbor image path
     """
-    # 1. Validate name
-    normalized_name = name.strip()
+    # Validate name
+    normalized_name = name.strip().lower()
     if not normalized_name:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Solver name cannot be empty",
         )
 
-    # 2. Check for duplicate solver name
+    if not VALID_IMAGE_NAME.match(normalized_name):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Solver name must be lowercase alphanumeric, may contain dots, hyphens, or underscores, and must start with a letter or digit",
+        )
+
+    # Check for duplicate solver name
     existing = db.query(Solver).filter(Solver.name == normalized_name).first()
     if existing:
         raise HTTPException(
@@ -137,7 +160,7 @@ async def upload_solver(
             detail=f"Solver with name '{normalized_name}' already exists",
         )
 
-    # 3. Validate file
+    # Validate file
     if not file:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="File is required"
@@ -151,17 +174,17 @@ async def upload_solver(
             detail="File cannot be empty",
         )
 
-    # 4. Save tarball to temporary file
+    # Save tarball to temporary file
     tarball_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".tar") as tmp:
             tmp.write(file_data)
             tarball_path = tmp.name
 
-        # 5. Get Harbor credentials
+        # Get Harbor credentials
         username, password = get_harbor_credentials()
 
-        # 6. Push to Harbor using skopeo
+        # Push to Harbor using skopeo
         # Use REGISTRY_URL for internal cluster communication
         registry_image_name = f"{Config.Harbor.REGISTRY_URL}/{Config.Harbor.PROJECT}/{normalized_name}:latest"
         # Use URL for storing in database (external reference)
@@ -182,39 +205,46 @@ async def upload_solver(
         if not Config.Harbor.TLS_VERIFY:
             skopeo_args.append("--dest-tls-verify=false")
 
-        result = subprocess.run(
-            skopeo_args,
-            capture_output=True,
-            text=True,
-            timeout=300,  # 5 minute timeout
+        # Safe: subprocess uses list args (no shell), Harbor RBAC restricts push to psp-solvers project only
+        # nosec B603
+        process = await asyncio.create_subprocess_exec(
+            *skopeo_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
 
-        if result.returncode != 0:
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=300,  # 5 minute timeout
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.wait()
+            db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to push image to Harbor: {result.stderr}",
+                detail="Image push timed out",
             )
 
-        # 7. Create SolverImage record with external image path
+        if process.returncode != 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to push image to Harbor: {stderr.decode('utf-8')}",
+            )
+
+        # Create SolverImage record with external image path
         solver_image = SolverImage(image_path=external_image_name)
         db.add(solver_image)
         db.flush()  # Get the ID without committing
 
-        # 8. Create Solver record
+        # Create Solver record
         solver = Solver(name=normalized_name, solver_images_id=solver_image.id)
         db.add(solver)
         db.commit()
         db.refresh(solver)
 
-        # 9. Return solver response
+        # Return solver response
         return SolverResponse.from_solver_with_image(solver)
 
-    except subprocess.TimeoutExpired:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Image push timed out",
-        )
     except HTTPException:
         db.rollback()
         raise
@@ -225,9 +255,10 @@ async def upload_solver(
             detail=f"Failed to upload solver: {str(e)}",
         )
     finally:
-        # 10. Clean up temporary file
+        # Clean up temporary file
         if tarball_path and os.path.exists(tarball_path):
             try:
                 os.unlink(tarball_path)
             except Exception:
-                pass  # Best effort cleanup
+                # Log cleanup failure to Prometheus
+                temp_file_cleanup_failures.labels(operation="solver_upload").inc()
