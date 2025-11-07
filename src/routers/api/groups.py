@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from src.database import get_db
 from src.models import Group
+from src.auth import auth
+from pprint import pprint
 
 router = APIRouter()
 
@@ -20,8 +22,20 @@ class GroupResponse(BaseModel):
     description: str | None
 
 
-@router.get("/groups", response_model=list[GroupResponse])
-def get_groups(db: Session = Depends(get_db)):
+@router.get("/test")
+def get_test():
+    raise ValueError("Hello there")
+    return "ok"
+
+
+@router.get(
+    "/groups",
+    response_model=list[GroupResponse],
+    dependencies=[auth.require_remote_token_validation()],
+)
+async def get_groups(
+    db: Session = Depends(get_db),
+):
     """Get all groups"""
     return db.query(Group).all()
 

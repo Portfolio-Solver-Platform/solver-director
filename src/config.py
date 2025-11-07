@@ -29,3 +29,7 @@ class Config:
         @classmethod
         def get_url(cls):
             return f"postgresql://{cls.USER}:{cls.PASSWORD}@{cls.HOST}:{cls.PORT}/{cls.NAME}"
+
+    class Auth:
+        CLIENT_ID = os.getenv("AUTH_CLIENT_ID", "")
+        CLIENT_SECRET = os.getenv("AUTH_CLIENT_SECRET", "")
