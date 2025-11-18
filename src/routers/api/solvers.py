@@ -188,9 +188,7 @@ async def upload_solver(
         # Use REGISTRY_URL for internal cluster communication
         registry_image_name = f"{Config.ArtifactRegistry.INTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
         # Use URL for storing in database (external reference)
-        external_image_name = (
-            f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
-        )
+        external_image_name = f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
 
         skopeo_args = [
             "skopeo",
