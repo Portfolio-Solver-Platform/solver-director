@@ -14,7 +14,7 @@ def start_project_services(id, user_id):
             status_code=429,
             detail="user has reached it's limit for concurrent solver controllers spawned",
         )
-    config.load_incluster_config() 
+    config.load_incluster_config()
     kube_client = client.CoreV1Api()
 
     namespace_manifest = {
@@ -110,8 +110,6 @@ def create_solver_controller_service_manifest():
     }
 
 
-
-
 def create_data_gatherer_pod_manifest():
     return {
         "apiVersion": "v1",
@@ -127,9 +125,7 @@ def create_data_gatherer_pod_manifest():
                     "name": "data-gatherer",
                     "image": f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.DataGatherer.ARTIFACT_REGISTRY_PATH}",
                     "imagePullPolicy": "IfNotPresent",
-                    "ports": [
-                        {"containerPort": Config.DataGatherer.CONTAINER_PORT}
-                    ],
+                    "ports": [{"containerPort": Config.DataGatherer.CONTAINER_PORT}],
                 }
             ],
         },

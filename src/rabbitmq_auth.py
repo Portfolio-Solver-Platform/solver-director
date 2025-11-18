@@ -1,4 +1,5 @@
 """OAuth2 authentication for RabbitMQ using Keycloak tokens."""
+
 import httpx
 import logging
 from datetime import datetime, timedelta
@@ -29,8 +30,7 @@ _token_cache = RabbitMQTokenCache()
 
 # OIDC endpoints fetcher (uses well-known from user service, caches for 1 hour)
 _oidc_endpoints = OidcEndpoints(
-    well_known_url=Config.Keycloak.WELL_KNOWN_URL,
-    request_timeout=(5, 10)
+    well_known_url=Config.Keycloak.WELL_KNOWN_URL, request_timeout=(5, 10)
 )
 
 
@@ -51,7 +51,9 @@ def get_rabbitmq_token() -> str:
 
     logger.debug(f"Using token endpoint from well-known: {token_url}")
     logger.debug(f"Client ID: {client_id}")
-    logger.debug(f"Client secret present: {client_secret is not None and len(client_secret) > 0}")
+    logger.debug(
+        f"Client secret present: {client_secret is not None and len(client_secret) > 0}"
+    )
 
     if not client_secret:
         raise Exception("KEYCLOAK_CLIENT_SECRET is not set or empty")
@@ -73,7 +75,7 @@ def get_rabbitmq_token() -> str:
         token_data = response.json()
 
         access_token = token_data["access_token"]
-        expires_in = token_data.get("expires_in", 1) # defaults to expire immediately
+        expires_in = token_data.get("expires_in", 1)  # defaults to expire immediately
 
         _token_cache.set_token(access_token, expires_in)
 
