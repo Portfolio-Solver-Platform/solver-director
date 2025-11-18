@@ -5,9 +5,7 @@ class ProblemConfig(BaseModel):
     """Configuration for a single problem with its instances"""
 
     problem: int = Field(..., description="Problem ID", gt=0)
-    instances: list[int] = Field(
-        ..., description="List of instance IDs", min_length=1
-    )
+    instances: list[int] = Field(..., description="List of instance IDs", min_length=1)
 
 
 class ProblemGroupConfig(BaseModel):
@@ -22,6 +20,7 @@ class ProblemGroupConfig(BaseModel):
 
 class ProjectConfiguration(BaseModel):
     """Full project configuration with multiple problem groups"""
+
     name: str = Field(..., description="Name of the project")
     configuration: list[ProblemGroupConfig] = Field(
         ..., description="List of problem group configurations", min_length=1

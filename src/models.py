@@ -130,7 +130,5 @@ class Project(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(String, nullable=False)
     name = Column(String, nullable=False)
-    configuration = Column(
-        JSON().with_variant(JSONB(), "postgresql"), nullable=False
-    )
+    configuration = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())

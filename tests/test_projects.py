@@ -2,6 +2,7 @@
 
 from unittest.mock import patch, MagicMock
 from psp_auth.testing import MockToken, MockUser
+
 # Test data
 VALID_CONFIG = {
     "name": "Test Project",
@@ -14,7 +15,7 @@ VALID_CONFIG = {
                 {"problem": 11, "instances": [4, 5]},
             ],
         }
-    ]
+    ],
 }
 
 VALID_CONFIG_MULTI_GROUP = {
@@ -33,7 +34,7 @@ VALID_CONFIG_MULTI_GROUP = {
                 {"problem": 21, "instances": [2, 3, 4]},
             ],
         },
-    ]
+    ],
 }
 
 
@@ -42,9 +43,10 @@ def test_create_project(client_with_db, auth):
     mock_user = MockUser(id="test-user-123")
     mock_token = MockToken(scopes=["projects:write"], user=mock_user)
     token = auth.issue_token(mock_token)
-    with patch("src.routers.api.projects.start_project_services") as mock_start, patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
-    ) as mock_publish:
+    with (
+        patch("src.routers.api.projects.start_project_services") as mock_start,
+        patch("src.routers.api.projects.publish_to_data_gatherer") as _,
+    ):
         response = client_with_db.post(
             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
         )
@@ -71,15 +73,22 @@ def test_get_all_projects(client_with_db, auth):
     read_token_obj = MockToken(scopes=["projects:read"], user=mock_user)
     write_token = auth.issue_token(write_token_obj)
     read_token = auth.issue_token(read_token_obj)
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create two projects
-        client_with_db.post("/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token))
-        client_with_db.post("/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token))
+        client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token)
+        )
+        client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token)
+        )
 
         # Get all projects
-        response = client_with_db.get("/v1/projects", headers=auth.auth_header(read_token))
+        response = client_with_db.get(
+            "/v1/projects", headers=auth.auth_header(read_token)
+        )
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -91,8 +100,6 @@ def test_get_all_projects(client_with_db, auth):
         assert data[1]["user_id"] == mock_user.id
 
 
-
-
 def test_get_project_status(client_with_db, auth):
     """Test getting a specific project status"""
     mock_user = MockUser(id="test-user-123")
@@ -100,8 +107,9 @@ def test_get_project_status(client_with_db, auth):
     read_token_obj = MockToken(scopes=["projects:read"], user=mock_user)
     write_token = auth.issue_token(write_token_obj)
     read_token = auth.issue_token(read_token_obj)
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create project
         create_response = client_with_db.post(
@@ -120,7 +128,8 @@ def test_get_project_status(client_with_db, auth):
 
             # Get project status
             response = client_with_db.get(
-                f"/v1/projects/{project_id}/status", headers=auth.auth_header(read_token)
+                f"/v1/projects/{project_id}/status",
+                headers=auth.auth_header(read_token),
             )
             assert response.status_code == 200
             data = response.json()
@@ -136,7 +145,9 @@ def test_get_nonexistent_project_status(client_with_db, auth):
     """Test getting non-existent project status returns 404"""
     token = auth.issue_token(MockToken(scopes=["projects:read"]))
     fake_uuid = "00000000-0000-0000-0000-000000000000"
-    response = client_with_db.get(f"/v1/projects/{fake_uuid}/status", headers=auth.auth_header(token))
+    response = client_with_db.get(
+        f"/v1/projects/{fake_uuid}/status", headers=auth.auth_header(token)
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "Invalid user or project"
 
@@ -144,8 +155,9 @@ def test_get_nonexistent_project_status(client_with_db, auth):
 def test_create_project_solver_controller_failure(client_with_db, auth):
     """Test that project creation fails if solver controller fails to start"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    with patch("src.routers.api.projects.start_project_services") as mock_start, patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services") as mock_start,
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         mock_start.side_effect = Exception("Failed to start solver controller")
 
@@ -162,8 +174,9 @@ def test_get_project_status_connection_error(client_with_db, auth):
     """Test that getting project status returns 503 when solver controller is unreachable"""
     write_token = auth.issue_token(MockToken(scopes=["projects:write"]))
     read_token = auth.issue_token(MockToken(scopes=["projects:read"]))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create project
         create_response = client_with_db.post(
@@ -177,7 +190,8 @@ def test_get_project_status_connection_error(client_with_db, auth):
 
             # Get project status - should fail with 503
             response = client_with_db.get(
-                f"/v1/projects/{project_id}/status", headers=auth.auth_header(read_token)
+                f"/v1/projects/{project_id}/status",
+                headers=auth.auth_header(read_token),
             )
             assert response.status_code == 503
             assert "unavailable" in response.json()["detail"].lower()
@@ -187,8 +201,9 @@ def test_get_project_status_connection_error(client_with_db, auth):
 def test_delete_project_success(client_with_db, auth):
     """Test successfully deleting a project"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create project
         create_response = client_with_db.post(
@@ -220,7 +235,9 @@ def test_delete_nonexistent_project(client_with_db, auth):
     """Test deleting a non-existent project returns 404"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
     fake_uuid = "00000000-0000-0000-0000-000000000000"
-    delete_response = client_with_db.delete(f"/v1/projects/{fake_uuid}", headers=auth.auth_header(token))
+    delete_response = client_with_db.delete(
+        f"/v1/projects/{fake_uuid}", headers=auth.auth_header(token)
+    )
     assert delete_response.status_code == 404
     assert delete_response.json()["detail"] == "Invalid user or project"
 
@@ -228,8 +245,9 @@ def test_delete_nonexistent_project(client_with_db, auth):
 def test_delete_project_namespace_failure(client_with_db, auth):
     """Test that project is deleted even if namespace deletion fails"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create project
         create_response = client_with_db.post(
@@ -261,11 +279,14 @@ def test_delete_project_namespace_failure(client_with_db, auth):
 def test_create_project_with_multiple_problem_groups(client_with_db, auth):
     """Test creating a project with multiple problem groups"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         response = client_with_db.post(
-            "/v1/projects", json=VALID_CONFIG_MULTI_GROUP, headers=auth.auth_header(token)
+            "/v1/projects",
+            json=VALID_CONFIG_MULTI_GROUP,
+            headers=auth.auth_header(token),
         )
 
         assert response.status_code == 201
@@ -277,7 +298,9 @@ def test_create_project_with_multiple_problem_groups(client_with_db, auth):
 def test_create_project_missing_configuration(client_with_db, auth):
     """Test creating project without configuration returns 422"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    response = client_with_db.post("/v1/projects", json={}, headers=auth.auth_header(token))
+    response = client_with_db.post(
+        "/v1/projects", json={}, headers=auth.auth_header(token)
+    )
 
     assert response.status_code == 422
     assert "configuration" in str(response.json()).lower()
@@ -287,7 +310,9 @@ def test_create_project_empty_configuration(client_with_db, auth):
     """Test creating project with empty configuration returns 422"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
     response = client_with_db.post(
-        "/v1/projects", json={"name": "Test", "configuration": []}, headers=auth.auth_header(token)
+        "/v1/projects",
+        json={"name": "Test", "configuration": []},
+        headers=auth.auth_header(token),
     )
 
     assert response.status_code == 422
@@ -305,7 +330,7 @@ def test_create_project_invalid_problem_group(client_with_db, auth):
                 "solvers": [1],
                 "problems": [{"problem": 1, "instances": [1]}],
             }
-        ]
+        ],
     }
     response = client_with_db.post(
         "/v1/projects", json=invalid_config, headers=auth.auth_header(token)
@@ -326,7 +351,7 @@ def test_create_project_empty_solvers(client_with_db, auth):
                 "solvers": [],  # Invalid: cannot be empty
                 "problems": [{"problem": 1, "instances": [1]}],
             }
-        ]
+        ],
     }
     response = client_with_db.post(
         "/v1/projects", json=invalid_config, headers=auth.auth_header(token)
@@ -347,7 +372,7 @@ def test_create_project_empty_instances(client_with_db, auth):
                 "solvers": [1],
                 "problems": [{"problem": 1, "instances": []}],  # Invalid: empty
             }
-        ]
+        ],
     }
     response = client_with_db.post(
         "/v1/projects", json=invalid_config, headers=auth.auth_header(token)
@@ -361,8 +386,9 @@ def test_get_project_config(client_with_db, auth):
     """Test getting project configuration"""
     write_token = auth.issue_token(MockToken(scopes=["projects:write"]))
     read_token = auth.issue_token(MockToken(scopes=["projects:read"]))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create project
         create_response = client_with_db.post(
@@ -390,7 +416,9 @@ def test_get_nonexistent_project_config(client_with_db, auth):
     """Test getting config for non-existent project returns 404"""
     token = auth.issue_token(MockToken(scopes=["projects:read"]))
     fake_uuid = "00000000-0000-0000-0000-000000000000"
-    response = client_with_db.get(f"/v1/projects/{fake_uuid}/config", headers=auth.auth_header(token))
+    response = client_with_db.get(
+        f"/v1/projects/{fake_uuid}/config", headers=auth.auth_header(token)
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "Invalid user or project"
 
@@ -399,8 +427,9 @@ def test_get_project_solution_not_implemented(client_with_db, auth):
     """Test getting project solution returns 501"""
     write_token = auth.issue_token(MockToken(scopes=["projects:write"]))
     read_token = auth.issue_token(MockToken(scopes=["projects:read"]))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # Create project
         create_response = client_with_db.post(
@@ -420,12 +449,15 @@ def test_get_nonexistent_project_solution(client_with_db, auth):
     """Test getting solution for non-existent project returns 404"""
     token = auth.issue_token(MockToken(scopes=["projects:read"]))
     fake_uuid = "00000000-0000-0000-0000-000000000000"
-    response = client_with_db.get(f"/v1/projects/{fake_uuid}/solution", headers=auth.auth_header(token))
+    response = client_with_db.get(
+        f"/v1/projects/{fake_uuid}/solution", headers=auth.auth_header(token)
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "Invalid user or project"
 
 
 # Security Tests
+
 
 def test_invalid_uuid_format_status(client_with_db, auth):
     """Test that invalid UUID format returns 404"""
@@ -438,7 +470,9 @@ def test_invalid_uuid_format_status(client_with_db, auth):
     ]
 
     for invalid_uuid in invalid_uuids:
-        response = client_with_db.get(f"/v1/projects/{invalid_uuid}/status", headers=auth.auth_header(token))
+        response = client_with_db.get(
+            f"/v1/projects/{invalid_uuid}/status", headers=auth.auth_header(token)
+        )
         assert response.status_code == 404
         assert response.json()["detail"] == "Invalid user or project"
 
@@ -446,7 +480,9 @@ def test_invalid_uuid_format_status(client_with_db, auth):
 def test_invalid_uuid_format_config(client_with_db, auth):
     """Test that invalid UUID format returns 404 for config endpoint"""
     token = auth.issue_token(MockToken(scopes=["projects:read"]))
-    response = client_with_db.get(f"/v1/projects/not-a-uuid/config", headers=auth.auth_header(token))
+    response = client_with_db.get(
+        "/v1/projects/not-a-uuid/config", headers=auth.auth_header(token)
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "Invalid user or project"
 
@@ -454,7 +490,9 @@ def test_invalid_uuid_format_config(client_with_db, auth):
 def test_invalid_uuid_format_delete(client_with_db, auth):
     """Test that invalid UUID format returns 404 for delete endpoint"""
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    response = client_with_db.delete(f"/v1/projects/not-a-uuid", headers=auth.auth_header(token))
+    response = client_with_db.delete(
+        "/v1/projects/not-a-uuid", headers=auth.auth_header(token)
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "Invalid user or project"
 
@@ -466,8 +504,9 @@ def test_user_cannot_access_other_users_project_status(client_with_db, auth):
 
     # User A creates a project
     token_a_write = auth.issue_token(MockToken(scopes=["projects:write"], user=user_a))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         response = client_with_db.post(
             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token_a_write)
@@ -490,8 +529,9 @@ def test_user_cannot_access_other_users_project_config(client_with_db, auth):
 
     # User A creates a project
     token_a_write = auth.issue_token(MockToken(scopes=["projects:write"], user=user_a))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         response = client_with_db.post(
             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token_a_write)
@@ -514,8 +554,9 @@ def test_user_cannot_delete_other_users_project(client_with_db, auth):
 
     # User A creates a project
     token_a_write = auth.issue_token(MockToken(scopes=["projects:write"], user=user_a))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         response = client_with_db.post(
             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token_a_write)
@@ -557,8 +598,9 @@ def test_delete_project_without_write_scope(client_with_db, auth):
 
     # Create project with write scope
     write_token = auth.issue_token(MockToken(scopes=["projects:write"], user=mock_user))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         response = client_with_db.post(
             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token)
@@ -579,8 +621,9 @@ def test_get_project_status_without_read_scope(client_with_db, auth):
 
     # Create project with write scope
     write_token = auth.issue_token(MockToken(scopes=["projects:write"], user=mock_user))
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         response = client_with_db.post(
             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token)
@@ -605,8 +648,9 @@ def test_get_projects_returns_only_user_projects(client_with_db, auth):
     token_b_write = auth.issue_token(MockToken(scopes=["projects:write"], user=user_b))
     token_b_read = auth.issue_token(MockToken(scopes=["projects:read"], user=user_b))
 
-    with patch("src.routers.api.projects.start_project_services"), patch(
-        "src.routers.api.projects.publish_to_data_gatherer"
+    with (
+        patch("src.routers.api.projects.start_project_services"),
+        patch("src.routers.api.projects.publish_to_data_gatherer"),
     ):
         # User A creates 2 projects
         response_a1 = client_with_db.post(
@@ -637,7 +681,9 @@ def test_get_projects_returns_only_user_projects(client_with_db, auth):
         project_b2_id = response_b2.json()["id"]
 
     # User A calls GET /projects - should only see their 2 projects
-    response_a = client_with_db.get("/v1/projects", headers=auth.auth_header(token_a_read))
+    response_a = client_with_db.get(
+        "/v1/projects", headers=auth.auth_header(token_a_read)
+    )
     assert response_a.status_code == 200
     projects_a = response_a.json()
     assert len(projects_a) == 2
@@ -646,7 +692,9 @@ def test_get_projects_returns_only_user_projects(client_with_db, auth):
     assert all(p["user_id"] == user_a.id for p in projects_a)
 
     # User B calls GET /projects - should only see their 2 projects
-    response_b = client_with_db.get("/v1/projects", headers=auth.auth_header(token_b_read))
+    response_b = client_with_db.get(
+        "/v1/projects", headers=auth.auth_header(token_b_read)
+    )
     assert response_b.status_code == 200
     projects_b = response_b.json()
     assert len(projects_b) == 2
