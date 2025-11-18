@@ -6,8 +6,6 @@ from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.database import Base, get_db
-from psp_auth.testing import MockAuth
-from src.auth import auth_config
 
 
 @pytest.fixture
@@ -37,11 +35,6 @@ def test_db():
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture
-def auth(monkeypatch):
-    return MockAuth(auth_config.client_id, monkeypatch)
 
 
 @pytest.fixture

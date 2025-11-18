@@ -24,7 +24,7 @@ spec:
     spec:
       serviceAccountName: solver-director
       imagePullSecrets:
-      - name: harbor-creds-pull
+      - name: harbor-creds
 
       securityContext:
         runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
@@ -82,16 +82,6 @@ spec:
               value: {{ .Values.postgres.database.password | quote }}
             - name: DATABASE_URL
               value: "postgresql://{{ .Values.postgres.database.user }}:{{ .Values.postgres.database.password }}@{{ .Values.postgres.service.name }}:{{ .Values.postgres.service.port }}/{{ .Values.postgres.database.name }}"
-            - name: KEYCLOAK_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: solver-director-auth-client
-                  key: id
-            - name: KEYCLOAK_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: solver-director-auth-client
-                  key: secret
 
       volumes:
         - name: tmp
