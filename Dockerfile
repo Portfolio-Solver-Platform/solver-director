@@ -11,12 +11,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN useradd -u 10001 -m appuser
 
-RUN apt-get update && \
-    apt-get install -y git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-
 WORKDIR /home/appuser/app
 
 COPY requirements.txt .
@@ -28,11 +22,8 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 # Upgrade pip to fix security vulnerability GHSA-4xh5-x5gv-qwph
 RUN pip install --upgrade pip
 
-
 FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt
-RUN pip install git+https://github.com/Portfolio-Solver-Platform/python-auth-lib@da7ea18
-
 COPY pyproject.toml .
 COPY alembic.ini .
 COPY alembic/ ./alembic/
@@ -44,8 +35,6 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.work
 
 FROM base AS runtime
 RUN pip install --no-cache-dir --user -r requirements.txt
-RUN pip install git+https://github.com/Portfolio-Solver-Platform/python-auth-lib@da7ea18
-
 COPY pyproject.toml .
 COPY alembic.ini .
 COPY alembic/ ./alembic/

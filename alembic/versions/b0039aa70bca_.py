@@ -1,18 +1,18 @@
-"""initial schema
+"""
 
-Revision ID: ac63395dc6e3
+Revision ID: b0039aa70bca
 Revises: 
-Create Date: 2025-10-28 10:43:10.462132
+Create Date: 2025-11-10 14:25:27.862209
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'ac63395dc6e3'
+revision: str = 'b0039aa70bca'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -41,12 +41,12 @@ def upgrade() -> None:
     sa.UniqueConstraint('name')
     )
     op.create_table('projects',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
-    sa.Column('solver_controller_id', sa.String(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('configuration', sa.JSON().with_variant(postgresql.JSONB(astext_type=sa.Text()), 'postgresql'), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('solver_controller_id')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('solver_images',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),

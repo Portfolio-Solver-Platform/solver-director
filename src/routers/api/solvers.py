@@ -186,10 +186,10 @@ async def upload_solver(
 
         # Push to Harbor using skopeo
         # Use REGISTRY_URL for internal cluster communication
-        registry_image_name = f"{Config.Harbor.REGISTRY_URL}/{Config.Harbor.PROJECT}/{normalized_name}:latest"
+        registry_image_name = f"{Config.ArtifactRegistry.INTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
         # Use URL for storing in database (external reference)
         external_image_name = (
-            f"{Config.Harbor.URL}/{Config.Harbor.PROJECT}/{normalized_name}:latest"
+            f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
         )
 
         skopeo_args = [
@@ -202,7 +202,7 @@ async def upload_solver(
         ]
 
         # Add TLS verification flag
-        if not Config.Harbor.TLS_VERIFY:
+        if not Config.ArtifactRegistry.TLS_VERIFY:
             skopeo_args.append("--dest-tls-verify=false")
 
         # Safe: subprocess uses list args (no shell), Harbor RBAC restricts push to psp-solvers project only

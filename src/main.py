@@ -37,7 +37,7 @@ app = FastAPI(
     title=Config.Api.TITLE,
     description=Config.Api.DESCRIPTION,
     version=Config.App.VERSION,
-    lifespan=lifespan,
+    # lifespan=lifespan,
 )
 
 

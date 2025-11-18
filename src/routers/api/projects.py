@@ -3,19 +3,30 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+from uuid import UUID
 import requests
 from prometheus_client import Counter
+import logging
 
 from src.database import get_db
 from src.models import Project
-from src.spawner.start_service import start_solver_controller
+from src.spawner.start_service import start_project_services
 from src.spawner.stop_service import stop_solver_controller
 from src.config import Config
-# from src.auth import auth
-# from psp_auth import User
+from src.schemas import ProjectConfiguration
+from src.auth import auth
+from psp_auth import User
+import pika
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
+SCOPES = {
+    "read": "projects:read",
+    "write": "projects:write",
+    "read-all": "projects:read-all",
+    "write-all": "projects:write-all",
+}
 
 # Prometheus metrics
 namespace_cleanup_failures = Counter(
@@ -27,137 +38,229 @@ namespace_cleanup_failures = Counter(
 
 class ProjectResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
-    id: int
+    id: UUID
     user_id: str
-    solver_controller_id: str
+    name: str
     created_at: datetime
 
 
 class ProjectWithStatusResponse(ProjectResponse):
     status: Any
+    
 
 
+scopes = [SCOPES["write"]]
 @router.post(
-    "/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED
+    "/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED, dependencies=[auth.require_scopes(scopes)], openapi_extra=auth.scope_docs(scopes)
 )
-def create_project(db: Annotated[Session, Depends(get_db)]):
+def create_project(
+    config: ProjectConfiguration, db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]
+):
     """Create a new project and start a solver controller"""
-    # TODO: Get user_id from authentication when implemented. Also make sure to implement tests for user_id handling.
-    user_id = "sofus"
 
-    # Start solver controller
-    try:
-        solver_controller_id = start_solver_controller(user_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start solver controller: {str(e)}",
-        )
-
-    # Create project in database
     project = Project(
-        user_id=user_id,
-        solver_controller_id=solver_controller_id,
+        user_id=user.id,
+        name=config.name,
+        configuration=config.model_dump(),
     )
 
     db.add(project)
+    try:
+        db.flush()  # Get the project ID without committing
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Database flush failed for user {user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create project",
+        )
+
+    try:
+        start_project_services(str(project.id), user.id)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to start services for project {project.id}, user {user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create project",
+        )
+
+    try:
+        publish_to_data_gatherer(
+            message=f"Project {project.user_id} accessed",
+            queue_name=str(project.id),
+        )
+    except Exception as e:
+        # RabbitMQ telemetry is optional - don't fail project creation
+        logger.warning(f"Failed to publish to data gatherer for project {project.id}: {e}")
 
     try:
         db.commit()
         db.refresh(project)
     except Exception as e:
         db.rollback()
-        # Check if it's a unique constraint violation
-        if "UNIQUE constraint failed" in str(e) or "duplicate key" in str(e).lower():
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Project with this solver controller already exists",
-            )
+        logger.error(f"Database commit failed for project {project.id}, user {user.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create project: {str(e)}",
+            detail="Unable to create project",
         )
 
     return project
 
 
-@router.get("/projects", response_model=list[ProjectResponse])
-def get_projects(db: Annotated[Session, Depends(get_db)], user_id: str | None = None):
-    """Get all projects, optionally filtered by user_id"""
-    query = db.query(Project)
 
-    if user_id is not None:
-        query = query.filter(Project.user_id == user_id)
+scopes = [SCOPES["read"]]
+@router.get("/projects", response_model=list[ProjectResponse], dependencies=[auth.require_scopes(scopes)], openapi_extra=auth.scope_docs(scopes))
+def get_projects(db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]):
+    """Get all projects for the authenticated user"""
+    projects = db.query(Project).filter(Project.user_id == user.id).all()
+    return projects
 
-    return query.all()
-
-
-# @router.get("/projects", response_model=list[ProjectResponse], dependencies=[auth.require_scopes(["projects:read"])], openapi_extra=auth.scope_docs(["projects:read"]))
-# def get_projects(db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]):
-#     """Get all projects for the authenticated user"""
-#     query = db.query(Project)
-
-#     query = query.filter(Project.user_id == user.id)
-
-#     return query.all()
-
-
-@router.get("/projects/{project_id}", response_model=ProjectWithStatusResponse)
-def get_project(project_id: int, db: Annotated[Session, Depends(get_db)]):
+scopes = [SCOPES["read"]]
+@router.get("/projects/{project_id}/status", response_model=ProjectWithStatusResponse, dependencies=[auth.require_scopes(scopes)], openapi_extra=auth.scope_docs(scopes))
+def get_project_status(project_id: str, db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]):
     """Get project by id with solver controller status"""
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
+
+    try:
+        uuid_id = UUID(project_id)
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
         )
 
+    project = db.query(Project).filter(Project.id == uuid_id).first()
+    if not project or project.user_id != user.id: # if project not found or does not belong to user
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
+        )
+
+
     # Build URL to solver controller's status endpoint
-    url = f"http://{Config.SolverController.SVC_NAME}.{project.solver_controller_id}.svc.cluster.local:{Config.SolverController.SERVICE_PORT}/v1/status"
+    url = f"http://{Config.SolverController.SVC_NAME}.{str(project.id)}.svc.cluster.local:{Config.SolverController.SERVICE_PORT}/v1/status?queue_name={str(project.id)}"
 
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         status_data = response.json()
     except Exception as e:
+        logger.warning(f"Failed to fetch status for project {project.id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Cannot connect to solver controller: {str(e)}",
+            detail="Project status temporarily unavailable",
         )
 
     return ProjectWithStatusResponse(
         id=project.id,
         user_id=project.user_id,
-        solver_controller_id=project.solver_controller_id,
+        name=project.name,
         created_at=project.created_at,
         status=status_data,
     )
 
 
-@router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: int, db: Annotated[Session, Depends(get_db)]):
+scopes = [SCOPES["read"]]
+@router.get("/projects/{project_id}/config", response_model=ProjectConfiguration, dependencies=[auth.require_scopes(scopes)], openapi_extra=auth.scope_docs(scopes))
+def get_project_config(project_id: str, db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]):
+    """Get project configuration for solver controller"""
+    try:
+        uuid_id = UUID(project_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
+        )
+
+    project = db.query(Project).filter(Project.id == uuid_id).first()
+    if not project or project.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
+        )
+
+    return project.configuration
+
+
+scopes = [SCOPES["read"]]
+@router.get("/projects/{project_id}/solution", dependencies=[auth.require_scopes(scopes)], openapi_extra=auth.scope_docs(scopes))
+def get_project_solution(project_id: str, db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]):
+    """Get project solution/results (not yet implemented)"""
+    try:
+        uuid_id = UUID(project_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
+        )
+
+    project = db.query(Project).filter(Project.id == uuid_id).first()
+    if not project or project.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
+        )
+
+    # TODO: Implement solution retrieval
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Solution retrieval not yet implemented",
+    )
+
+
+scopes = [SCOPES["write"]]
+@router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[auth.require_scopes(scopes)], openapi_extra=auth.scope_docs(scopes))
+def delete_project(project_id: str, db: Annotated[Session, Depends(get_db)], user: Annotated[User, Depends(auth.user())]):
     """Delete a project and its solver controller namespace
 
     TODO: Also delete solver controller generated data when implemented
     """
-    # Verify project exists
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
+    # TODO: verify with keycloak that the token is valid with require remote token validation
+    try:
+        uuid_id = UUID(project_id)
+    except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
         )
 
-    # Try to stop solver controller, but continue even if it fails
-    # (e.g., namespace might already be deleted)
+    project = db.query(Project).filter(Project.id == uuid_id).first()
+    if not project or project.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
+        )
+
     try:
-        stop_solver_controller(project.solver_controller_id)
-    except Exception:
-        # Log the error but don't fail the deletion
-        # The namespace might already be deleted or unavailable
+        stop_solver_controller(str(project.id))
+    except Exception as e:
+        logger.error(f"Failed to cleanup namespace for project {project.id}: {e}")
         namespace_cleanup_failures.labels(operation="project_deletion").inc()
         pass
 
-    # Delete project from database
     db.delete(project)
     db.commit()
     return None
+
+
+
+
+
+def publish_to_data_gatherer(message: str, queue_name: str):
+    """Send a message to data-gatherer via RabbitMQ using OAuth2"""
+    # # Get JWT token from Keycloak
+    # token = get_rabbitmq_token()
+
+    # # Use token as password, empty username for OAuth2
+    # credentials = pika.PlainCredentials("", token)
+    credentials = pika.PlainCredentials(Config.RabbitMQ.USER, Config.RabbitMQ.PASSWORD)
+    parameters = pika.ConnectionParameters(
+        host=Config.RabbitMQ.HOST,
+        port=Config.RabbitMQ.PORT,
+        credentials=credentials
+    )
+
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+
+    channel.queue_declare(queue=queue_name, durable=True)
+    channel.basic_publish(
+        exchange='',
+        routing_key=queue_name,
+        body=message,
+        properties=pika.BasicProperties(delivery_mode=2)  # persistent
+    )
+
+    connection.close()
