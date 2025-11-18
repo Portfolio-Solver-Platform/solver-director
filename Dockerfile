@@ -2,7 +2,12 @@
 FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 
+    PYTHONUNBUFFERED=1
+
+# Install skopeo for pushing Docker images to Harbor
+RUN apt-get update && apt-get install -y \
+    skopeo \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -u 10001 -m appuser
 
@@ -14,6 +19,8 @@ COPY requirements-dev.txt .
 USER 10001
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 
+# Upgrade pip to fix security vulnerability GHSA-4xh5-x5gv-qwph
+RUN pip install --upgrade pip
 
 FROM base AS dev
 RUN pip install --no-cache-dir --user -r requirements-dev.txt

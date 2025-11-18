@@ -1,6 +1,5 @@
 import os
 
-
 class Config:
     class App:
         NAME = "solver-director"
@@ -13,12 +12,27 @@ class Config:
         VERSION = "v1"
         ROOT_PATH = "/api/solverdirector"
 
+    class ArtifactRegistry:
+        EXTERNAL_URL = os.getenv("EXTERNAL_ARTIFACT_REGISTRY_URL", "harbor.local/")
+        # Internal registry URL for skopeo (defaults to harbor-core service)
+        INTERNAL_URL = os.getenv(
+            "INTERNAL_ARTIFACT_REGISTRY_URL", "harbor-core.harbor.svc.cluster.local/"
+        )
+        PROJECT = "psp-solvers"
+        TLS_VERIFY = os.getenv("HARBOR_TLS_VERIFY", "false") == "true"
+
     class SolverController:
-        HARBOR_NAME = "harbor.local/psp/solver-controller:latest"
+        ARTIFACT_REGISTRY_PATH = "psp/solver-controller:latest"
         SVC_NAME = "solver-controller"
         CONTAINER_PORT = 8080
         SERVICE_PORT = 80
 
+    class DataGatherer:
+        ARTIFACT_REGISTRY_PATH = "psp/data-gatherer:latest"
+        SVC_NAME = "data-gatherer"
+        CONTAINER_PORT = 8080
+        SERVICE_PORT = 80
+        
     class Database:
         HOST = os.getenv("DB_HOST", "postgres-postgresql")
         PORT = os.getenv("DB_PORT", "5432")
@@ -29,3 +43,18 @@ class Config:
         @classmethod
         def get_url(cls):
             return f"postgresql://{cls.USER}:{cls.PASSWORD}@{cls.HOST}:{cls.PORT}/{cls.NAME}"
+
+
+    class RabbitMQ:
+        HOST = os.getenv("RABBITMQ_HOST", "rabbitmq.rabbit-mq.svc.cluster.local")
+        PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
+        USER = os.getenv("RABBITMQ_USER", "guest")
+        PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+
+    # class Keycloak:
+    #     CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "solver-director")
+    #     CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET")  # Required from secret
+    #     WELL_KNOWN_URL = os.getenv(
+    #         "KEYCLOAK_WELL_KNOWN_URL",
+    #         "http://user.psp.svc.cluster.local:8080/v1/.well-known/openid-configuration/internal"
+    #     )

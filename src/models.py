@@ -8,9 +8,12 @@ from sqlalchemy import (
     DateTime,
     Boolean,
 )
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.types import JSON
 from .database import Base
+import uuid
 
 solver_supported_groups = Table(
     "solver_supported_groups",
@@ -124,7 +127,10 @@ class Instance(Base):
 class Project(Base):
     __tablename__ = "projects"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(String, nullable=False)
-    solver_controller_id = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False)
+    configuration = Column(
+        JSON().with_variant(JSONB(), "postgresql"), nullable=False
+    )
     created_at = Column(DateTime, nullable=False, server_default=func.now())

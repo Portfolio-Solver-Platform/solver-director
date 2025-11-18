@@ -3,26 +3,24 @@ from fastapi import HTTPException
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from src.spawner.status_service import is_user_limit_reached
-from src.spawner.util.util_service import generate_solver_controller_id
 
 from src.config import Config
 
 
-def start_solver_controller(user_id):
-    solver_controller_id = generate_solver_controller_id(user_id)
+def start_project_services(id, user_id):
     users_solver_controller_limit_reached = is_user_limit_reached(user_id)
     if users_solver_controller_limit_reached:
         raise HTTPException(
             status_code=429,
             detail="user has reached it's limit for concurrent solver controllers spawned",
         )
-    config.load_incluster_config()  # This tells it to use the mounted service account
+    config.load_incluster_config() 
     kube_client = client.CoreV1Api()
 
     namespace_manifest = {
         "apiVersion": "v1",
         "kind": "Namespace",
-        "metadata": {"name": solver_controller_id},
+        "metadata": {"name": id},
     }
     try:
         kube_client.create_namespace(body=namespace_manifest)
@@ -33,33 +31,37 @@ def start_solver_controller(user_id):
             raise
 
     template_secret = kube_client.read_namespaced_secret(
-        name="harbor-creds", namespace="psp"
+        name="harbor-creds-pull", namespace="psp"
     )
 
     new_secret = client.V1Secret(
-        metadata=client.V1ObjectMeta(
-            name="harbor-creds", namespace=solver_controller_id
-        ),
+        metadata=client.V1ObjectMeta(name="harbor-creds", namespace=id),
         type=template_secret.type,
         data=template_secret.data,
     )
 
-    kube_client.create_namespaced_secret(
-        namespace=solver_controller_id, body=new_secret
+    kube_client.create_namespaced_secret(namespace=id, body=new_secret)
+
+    _ = kube_client.create_namespaced_pod(
+        namespace=id, body=create_solver_controller_pod_manifest(id)
+    )
+    _ = kube_client.create_namespaced_service(
+        namespace=id,
+        body=create_solver_controller_service_manifest(),
     )
 
     _ = kube_client.create_namespaced_pod(
-        namespace=solver_controller_id, body=create_pod_manifest(solver_controller_id)
+        namespace=id, body=create_data_gatherer_pod_manifest()
     )
     _ = kube_client.create_namespaced_service(
-        namespace=solver_controller_id,
-        body=create_service_manifest(solver_controller_id),
+        namespace=id,
+        body=create_data_gatherer_service_manifest(),
     )
 
-    return solver_controller_id
 
-
-def create_pod_manifest(solver_controller_id):
+def create_solver_controller_pod_manifest(project_id):
+    # Construct the solver-director base URL
+    solver_director_url = "http://solver-director.solver-director.svc.cluster.local"
     return {
         "apiVersion": "v1",
         "kind": "Pod",
@@ -72,9 +74,14 @@ def create_pod_manifest(solver_controller_id):
             "containers": [
                 {
                     "name": "solver-controller",
-                    "image": Config.SolverController.HARBOR_NAME,
+                    "image": f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.SolverController.ARTIFACT_REGISTRY_PATH}",
+                    "imagePullPolicy": "IfNotPresent",
                     "ports": [
                         {"containerPort": Config.SolverController.CONTAINER_PORT}
+                    ],
+                    "env": [
+                        {"name": "PROJECT_ID", "value": str(project_id)},
+                        {"name": "SOLVER_DIRECTOR_URL", "value": solver_director_url},
                     ],
                 }
             ],
@@ -82,7 +89,7 @@ def create_pod_manifest(solver_controller_id):
     }
 
 
-def create_service_manifest(solver_controller_id):
+def create_solver_controller_service_manifest():
     return {
         "apiVersion": "v1",
         "kind": "Service",
@@ -91,7 +98,7 @@ def create_service_manifest(solver_controller_id):
             "labels": {"solver_controller_id": "solver-controller"},
         },
         "spec": {
-            "type": "LoadBalancer",
+            "type": "ClusterIP",
             "selector": {"solver_controller_id": "solver-controller"},
             "ports": [
                 {
@@ -103,67 +110,48 @@ def create_service_manifest(solver_controller_id):
     }
 
 
-# def get_service_ip(v1, ctf_id):
-#     service_ip = None
-#     timeout_seconds = 100
-#     start_time = time.time()
-#     while not service_ip and (time.time() - start_time) < timeout_seconds:
-#         service_name = find_service_by_label(v1, ctf_id).metadata.name
-#         service = v1.read_namespaced_service(name=service_name, namespace=namespace)
-#         if service.status.load_balancer.ingress:
-#             service_ip = service.status.load_balancer.ingress[0].ip
-#         else:
-#             time.sleep(5)
-#     return service_ip
 
 
-def create_rbac_manifests(solver_controller_id):
-    """Create service account and role binding for the specific namespace"""
-
-    # Service Account
-    service_account = {
+def create_data_gatherer_pod_manifest():
+    return {
         "apiVersion": "v1",
-        "kind": "ServiceAccount",
-        "metadata": {"name": "solver-controller", "namespace": solver_controller_id},
-    }
-
-    # Role (namespace-scoped permissions)
-    role = {
-        "apiVersion": "rbac.authorization.k8s.io/v1",
-        "kind": "Role",
+        "kind": "Pod",
         "metadata": {
-            "name": "solver-controller-role",
-            "namespace": solver_controller_id,
+            "name": "data-gatherer",
+            "labels": {"data_gatherer_id": "data-gatherer"},
         },
-        "rules": [
-            {
-                "apiGroups": [""],
-                "resources": ["pods", "services"],
-                "verbs": ["get", "list", "create", "delete", "watch"],
-            }
-        ],
+        "spec": {
+            "imagePullSecrets": [{"name": "harbor-creds"}],
+            "containers": [
+                {
+                    "name": "data-gatherer",
+                    "image": f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.DataGatherer.ARTIFACT_REGISTRY_PATH}",
+                    "imagePullPolicy": "IfNotPresent",
+                    "ports": [
+                        {"containerPort": Config.DataGatherer.CONTAINER_PORT}
+                    ],
+                }
+            ],
+        },
     }
 
-    # Role Binding
-    role_binding = {
-        "apiVersion": "rbac.authorization.k8s.io/v1",
-        "kind": "RoleBinding",
+
+def create_data_gatherer_service_manifest():
+    return {
+        "apiVersion": "v1",
+        "kind": "Service",
         "metadata": {
-            "name": "solver-controller-binding",
-            "namespace": solver_controller_id,
+            "name": "data-gatherer",
+            "labels": {"data_gatherer_id": "data-gatherer"},
         },
-        "roleRef": {
-            "apiGroup": "rbac.authorization.k8s.io",
-            "kind": "Role",
-            "name": "solver-controller-role",
+        "spec": {
+            "type": "ClusterIP",
+            "selector": {"data_gatherer_id": "data-gatherer"},
+            "ports": [
+                {
+                    "port": Config.DataGatherer.SERVICE_PORT,
+                    "targetPort": Config.DataGatherer.CONTAINER_PORT,
+                }
+            ],
         },
-        "subjects": [
-            {
-                "kind": "ServiceAccount",
-                "name": "solver-controller",
-                "namespace": solver_controller_id,
-            }
-        ],
     }
-
-    return service_account, role, role_binding
