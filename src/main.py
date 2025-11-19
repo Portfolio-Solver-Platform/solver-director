@@ -1,34 +1,8 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from .config import Config
 from .routers import health, version, api
 import prometheus_fastapi_instrumentator
-import time
-from alembic.config import Config as AlembicConfig
-from alembic import command
 from .auth import auth
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifespan event handler for startup/shutdown"""
-    if Config.App.DEBUG:
-        max_retries = 5
-        retry_delay = 2
-
-        for attempt in range(max_retries):
-            try:
-                alembic_cfg = AlembicConfig("alembic.ini")
-                command.upgrade(alembic_cfg, "head")
-                break
-            except Exception:
-                if attempt < max_retries - 1:
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    raise  # Re-raise in DEBUG mode so we know something is wrong
-
-    yield
 
 
 app = FastAPI(
@@ -37,7 +11,6 @@ app = FastAPI(
     title=Config.Api.TITLE,
     description=Config.Api.DESCRIPTION,
     version=Config.App.VERSION,
-    # lifespan=lifespan,
 )
 
 

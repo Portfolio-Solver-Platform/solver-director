@@ -4,9 +4,9 @@
 #
 #    pip-compile --extra=dev --output-file=requirements-dev.txt --strip-extras pyproject.toml
 #
-alembic==1.17.1
+alembic==1.17.2
     # via solver-director (pyproject.toml)
-annotated-doc==0.0.3
+annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
@@ -15,17 +15,17 @@ anyio==4.11.0
     #   httpx
     #   starlette
     #   watchfiles
-bandit==1.8.6
+bandit==1.9.1
     # via solver-director (pyproject.toml)
 boolean-py==5.0
     # via license-expression
-cachecontrol==0.14.3
+cachecontrol==0.14.4
     # via
     #   cachecontrol
     #   pip-audit
-cachetools==6.2.1
+cachetools==6.2.2
     # via google-auth
-certifi==2025.10.5
+certifi==2025.11.12
     # via
     #   httpcore
     #   httpx
@@ -36,12 +36,12 @@ cffi==2.0.0
     # via cryptography
 charset-normalizer==3.4.4
     # via requests
-click==8.3.0
+click==8.3.1
     # via
     #   rich-toolkit
     #   typer
     #   uvicorn
-coverage==7.11.0
+coverage==7.12.0
     # via pytest-cov
 cryptography==46.0.3
     # via joserfc
@@ -61,10 +61,12 @@ fastapi==0.120.4
     # via
     #   psp-auth
     #   solver-director (pyproject.toml)
-fastapi-cli==0.0.14
+fastapi-cli==0.0.16
     # via fastapi
-fastapi-cloud-cli==0.3.1
+fastapi-cloud-cli==0.4.0
     # via fastapi-cli
+fastar==0.6.0
+    # via fastapi-cloud-cli
 filelock==3.20.0
     # via cachecontrol
 google-auth==2.43.0
@@ -97,7 +99,7 @@ itsdangerous==2.2.0
     # via psp-auth
 jinja2==3.1.6
     # via fastapi
-joserfc==1.4.1
+joserfc==1.4.3
     # via psp-auth
 kubernetes==34.1.0
     # via solver-director (pyproject.toml)
@@ -143,7 +145,7 @@ prometheus-client==0.23.1
     # via prometheus-fastapi-instrumentator
 prometheus-fastapi-instrumentator==7.1.0
     # via solver-director (pyproject.toml)
-psp-auth==1.1.0
+psp-auth==1.1.1
     # via solver-director (pyproject.toml)
 psycopg2-binary==2.9.11
     # via solver-director (pyproject.toml)
@@ -169,7 +171,7 @@ pygments==2.19.2
     #   rich
 pyparsing==3.2.5
     # via pip-requirements-parser
-pytest==8.4.2
+pytest==9.0.1
     # via
     #   pytest-cov
     #   pytest-mock
@@ -212,9 +214,9 @@ rignore==0.7.6
     # via fastapi-cloud-cli
 rsa==4.9.1
     # via google-auth
-ruff==0.14.4
+ruff==0.14.5
     # via solver-director (pyproject.toml)
-sentry-sdk==2.43.0
+sentry-sdk==2.45.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
