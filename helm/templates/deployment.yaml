@@ -34,7 +34,17 @@ spec:
         - name: db-migrate
           image: {{ required "image should be set by skaffold which it is not" .Values.image }}
           imagePullPolicy: {{ .Values.imagePullPolicy }}
-          command: ["alembic", "upgrade", "head"]
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL to be ready..."
+              until python3 -c "import psycopg2; psycopg2.connect('${DATABASE_URL}').close()"; do
+                echo "PostgreSQL is unavailable - sleeping"
+                sleep 2
+              done
+              echo "PostgreSQL is ready - running migrations"
+              alembic upgrade head
           securityContext:
             allowPrivilegeEscalation: {{ .Values.containerSecurityContext.allowPrivilegeEscalation }}
             readOnlyRootFilesystem: {{ .Values.containerSecurityContext.readOnlyRootFilesystem }}
