@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from . import groups, problems, instances, projects, solvers
-from src.auth import auth_config
+from src.auth import auth_config, auth_base
+from joserfc import jwt
+from joserfc.jwk import KeySet
 import httpx
 
 router = APIRouter()
@@ -8,7 +10,33 @@ router = APIRouter()
 
 @router.get("/test")
 async def my_test():
-    print("Trying to log in to Keycloak")
+    psp_token = await psp_login()
+
+    key_set = KeySet.import_key_set(auth_base.token_certs())
+    token = jwt.decode(psp_token, key_set)
+    print(token.claims)
+
+    secrets_token = await secrets_login(psp_token)
+
+    return secrets_token
+
+
+async def secrets_login(psp_token: str) -> str:
+    timeout = httpx.Timeout(10.0, connect=5.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        data = await client.post(
+            "http://secrets-manager-openbao.secrets-manager.svc.cluster.local:8200/v1/auth/jwt/login",
+            data={
+                "role": "artifact-write",
+                "jwt": psp_token,
+            },
+        )
+    print(data)
+    return data.json()
+    return data.json()["auth"]["client_token"]
+
+
+async def psp_login() -> str:
     timeout = httpx.Timeout(10.0, connect=5.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
         data = await client.post(
@@ -19,8 +47,7 @@ async def my_test():
                 "grant_type": "client_credentials",
             },
         )
-        print(data)
-        return data
+    return data.json()["access_token"]
 
 
 router.include_router(solvers.router, tags=["Solvers"])

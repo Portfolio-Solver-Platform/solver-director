@@ -2,7 +2,7 @@ from psp_auth import Auth, AuthConfig, FastAPIAuth
 
 auth_config = AuthConfig(
     client_id="solver-director",
-    client_secret="LZssLCVRQCL206Ehk0UA91WEXSZkGue7",
+    client_secret="Ycew6UMTHNsEtHuntIYj50oyxxdDuxWg",
     well_known_endpoint="http://user.psp.svc.cluster.local:8080/v1/internal/.well-known/openid-configuration",
 )
 
