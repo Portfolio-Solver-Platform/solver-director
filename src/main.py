@@ -1,8 +1,34 @@
+import asyncio
 from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
 from .config import Config
 from .routers import health, version, api
 import prometheus_fastapi_instrumentator
 from .auth import auth
+import asyncpg
+from .spawner.result_collector import result_collector
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create asyncpg connection pool
+    app.state.pool = await asyncpg.create_pool(
+        host=Config.Database.HOST,
+        port=Config.Database.PORT,
+        user=Config.Database.USER,
+        password=Config.Database.PASSWORD,
+        database=Config.Database.NAME,
+        min_size=1,
+        max_size=10
+    )
+
+    # Start result collector background task
+    asyncio.create_task(result_collector())
+
+    yield
+
+    # Close connection pool on shutdown
+    await app.state.pool.close()
 
 
 app = FastAPI(
@@ -11,6 +37,8 @@ app = FastAPI(
     title=Config.Api.TITLE,
     description=Config.Api.DESCRIPTION,
     version=Config.App.VERSION,
+    lifespan=lifespan,
+
 )
 
 

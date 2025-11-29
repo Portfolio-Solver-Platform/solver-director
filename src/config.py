@@ -36,7 +36,7 @@ class Config:
 
     class Database:
         HOST = os.getenv("DB_HOST", "postgres-postgresql")
-        PORT = os.getenv("DB_PORT", "5432")
+        PORT = int(os.getenv("DB_PORT", "5432"))
         NAME = os.getenv("DB_NAME", "appdb")
         USER = os.getenv("DB_USER", "appuser")
         PASSWORD = os.getenv("DB_PASSWORD", "devpassword123")
@@ -50,6 +50,15 @@ class Config:
         PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
         USER = os.getenv("RABBITMQ_USER", "guest")
         PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
+        SOLVER_DIRECTOR_RESULT_QUEUE = f"solver_director_result_queue"
+
+    class SolversNamespace:
+        CPU_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_CPU_QUOTA", "1")) # In cores
+        MEMORY_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_MEMORY_QUOTA", "2")) # In GiB
+        
+    SOLUTION_RETRIEVAL_CHUNK_SIZE = float(os.getenv("SOLUTION_RETRIEVAL_CHUNK_SIZE", "1000"))
+    SOLVER_DIRECTOR_URL = "http://solver-director.solver-director.svc.cluster.local"
+   
 
     # class Keycloak:
     #     CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "solver-director")

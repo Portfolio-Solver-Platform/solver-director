@@ -11,7 +11,10 @@ dependencies = [
     "kubernetes>=34.1,<35.0",
     "requests>=2.32.5,<3.0",
     "pika>=1,<2.0",
+    "aio-pika>=9.0,<10.0",
+    "dacite>=1.8,<2.0",
     "psp-auth>=1.1.0,<2.0",
+    "asyncpg>=0.31.0,<1.0",
 ]
 
 [project.optional-dependencies]
