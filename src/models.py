@@ -154,7 +154,7 @@ class ProjectResult(Base):
     @classmethod
     def from_json(cls, data: dict):
         return cls(
-            project_id=UUID(data["project_id"]),  # Convert string to UUID
+            project_id=data["project_id"],
             problem_id=data["problem_id"],
             instance_id=data["instance_id"],
             solver_id=data["solver_id"],

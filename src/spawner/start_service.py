@@ -149,7 +149,7 @@ def start_project_services(project_config, id, user_id):
     
 
     _ = kube_client.create_namespaced_pod(
-        namespace=id, body=create_solver_controller_pod_manifest(id, control_queue)
+        namespace=id, body=create_solver_controller_pod_manifest(id, control_queue, result_queue)
     )
     _ = kube_client.create_namespaced_service(
         namespace=id,
@@ -196,7 +196,7 @@ def start_project_services(project_config, id, user_id):
     finally:
         connection.close() 
 
-def create_solver_controller_pod_manifest(project_id, control_queue):
+def create_solver_controller_pod_manifest(project_id, control_queue, result_queue):
     solver_director_url = Config.SOLVER_DIRECTOR_URL
     _solvers_namespace = solvers_namespace(project_id)
 
@@ -224,12 +224,18 @@ def create_solver_controller_pod_manifest(project_id, control_queue):
                         {"containerPort": Config.SolverController.CONTAINER_PORT}
                     ],
                     "env": [
+                        {"name": "PROJECT_SOLVER_RESULT_QUEUE", "value": result_queue},
                         {"name": "PROJECT_ID", "value": str(project_id)},
                         {"name": "SOLVERS_NAMESPACE", "value": _solvers_namespace},
-                        {"name": "SOLVER_TYPES", "value": "chuffed"},
+                        # {"name": "SOLVER_TYPES", "value": "chuffed"},
                         {"name": "CONTROL_QUEUE", "value": control_queue},
                         {"name": "MAX_TOTAL_SOLVER_REPLICAS", "value": str(max_replicas)},
-                        {"name": "SOLVER_DIRECTOR_URL", "value": solver_director_url},
+                        # {"name": "SOLVER_DIRECTOR_URL", "value": solver_director_url},
+                        {"name": "KEDA_QUEUE_LENGTH", "value": Config.Keda.KEDA_QUEUE_LENGTH},
+                        {"name": "RABBITMQ_HOST", "value": Config.RabbitMQ.HOST},
+                        {"name": "RABBITMQ_PORT", "value": str(Config.RabbitMQ.PORT)},
+                        {"name": "RABBITMQ_USER", "value": Config.RabbitMQ.USER},
+                        {"name": "RABBITMQ_PASSWORD", "value": Config.RabbitMQ.PASSWORD},
                     ],
                     "volumeMounts": [
                         {"name": "tmp", "mountPath": "/tmp"},

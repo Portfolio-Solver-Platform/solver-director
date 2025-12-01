@@ -38,17 +38,25 @@ async def result_collector():
                         result_data = message.body.decode()
                         result_json = json.loads(result_data)
                         if result_json.get("final_message", False):
-                            stop_solver_controller(result_json["project_id"])
+                            try:
+                                stop_solver_controller(result_json["project_id"])
+                            except Exception as cleanup_error:
+                                logger.warning(f"Failed to cleanup project {result_json.get('project_id')}: {cleanup_error}")
                             result_json.pop("final_message", None)
                             result_json.pop("total_messages", None)
 
                         result = ProjectResult.from_json(result_json)
-                        
+
                         db.add(result)
                         db.commit()
                     except Exception as e:
                         db.rollback()
-                        logger.error(f"Failed to save result: {e}", exc_info=True)
-                        raise
+                        # Check if this is a foreign key violation for a deleted project
+                        if "project_results_project_id_fkey" in str(e):
+                            logger.warning(f"Ignoring result for deleted project {result_json.get('project_id')}")
+                            # Don't raise - this will acknowledge and discard the message
+                        else:
+                            logger.error(f"Failed to save result: {e}", exc_info=True)
+                            raise
                     finally:
                         db.close()

@@ -53,8 +53,12 @@ class Config:
         SOLVER_DIRECTOR_RESULT_QUEUE = f"solver_director_result_queue"
 
     class SolversNamespace:
-        CPU_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_CPU_QUOTA", "1")) # In cores
-        MEMORY_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_MEMORY_QUOTA", "2")) # In GiB
+        CPU_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_CPU_QUOTA", "5")) # In cores
+        MEMORY_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_MEMORY_QUOTA", "16")) # In GiB
+        
+    class Keda:
+        KEDA_QUEUE_LENGTH = os.getenv("KEDA_QUEUE_LENGTH", "1")
+
         
     SOLUTION_RETRIEVAL_CHUNK_SIZE = float(os.getenv("SOLUTION_RETRIEVAL_CHUNK_SIZE", "1000"))
     SOLVER_DIRECTOR_URL = "http://solver-director.solver-director.svc.cluster.local"
