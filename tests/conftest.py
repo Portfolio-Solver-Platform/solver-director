@@ -54,8 +54,10 @@ def mock_lifespan_dependencies():
 
     mock_result_collector = AsyncMock()
 
-    with patch("src.main.asyncpg.create_pool", side_effect=mock_create_pool), \
-         patch("src.main.result_collector", return_value=mock_result_collector):
+    with (
+        patch("src.main.asyncpg.create_pool", side_effect=mock_create_pool),
+        patch("src.main.result_collector", return_value=mock_result_collector),
+    ):
         yield
 
 
@@ -63,6 +65,7 @@ def mock_lifespan_dependencies():
 def client():
     """Simple test client for non-database tests"""
     from src.main import app
+
     with TestClient(app) as client:
         yield client
 

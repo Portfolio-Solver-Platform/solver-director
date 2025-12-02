@@ -133,7 +133,7 @@ def test_upload_solver_missing_file(client_with_db):
     """Test uploading a solver without file fails"""
     response = client_with_db.post(
         "/api/solverdirector/v1/solvers",
-        data={"image_name": "minizinc-solver", "names": "gecode"}
+        data={"image_name": "minizinc-solver", "names": "gecode"},
     )
 
     assert response.status_code == 422
@@ -235,7 +235,9 @@ def test_upload_solver_creates_database_records(client_with_db, test_db, mocker)
         )
         assert solver_image is not None
         assert solver_image.image_name == "minizinc-solver"
-        assert solver_image.image_path == "harbor.local/psp-solvers/minizinc-solver:latest"
+        assert (
+            solver_image.image_path == "harbor.local/psp-solvers/minizinc-solver:latest"
+        )
 
         # Check that both Solver records were created
         chuffed_solver = test_db.query(Solver).filter(Solver.name == "chuffed").first()
@@ -356,7 +358,10 @@ def test_get_all_solvers(client_with_db, test_db, mocker):
             assert "image_name" in solver
             assert "image_path" in solver
             assert solver["image_name"] == "minizinc-solver"
-            assert solver["image_path"] == "harbor.local/psp-solvers/minizinc-solver:latest"
+            assert (
+                solver["image_path"]
+                == "harbor.local/psp-solvers/minizinc-solver:latest"
+            )
 
 
 def test_get_solver_by_id(client_with_db, test_db, mocker):

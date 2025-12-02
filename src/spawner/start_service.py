@@ -1,11 +1,16 @@
-from dataclasses import asdict
 import json
 from fastapi import HTTPException
 
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from src.spawner.stop_service import stop_solver_controller
-from src.utils import solvers_namespace, control_queue_name, solver_director_result_queue_name, result_queue_name, project_director_queue_name
+from src.utils import (
+    solvers_namespace,
+    control_queue_name,
+    solver_director_result_queue_name,
+    result_queue_name,
+    project_director_queue_name,
+)
 from src.spawner.status_service import is_user_limit_reached
 
 from src.config import Config
@@ -31,7 +36,7 @@ def start_project_services(project_config, id, user_id):
         kube_client.create_namespace(body=namespace_manifest)
     except ApiException as e:
         if e.status == 409:
-            pass  # already exists 
+            pass  # already exists
         else:
             raise
 
@@ -45,7 +50,7 @@ def start_project_services(project_config, id, user_id):
         kube_client.create_namespace(body=solvers_namespace_manifest)
     except ApiException as e:
         if e.status == 409:
-            pass   # already exists 
+            pass  # already exists
         else:
             raise
 
@@ -66,11 +71,15 @@ def start_project_services(project_config, id, user_id):
         type=template_secret.type,
         data=template_secret.data,
     )
-    kube_client.create_namespaced_secret(namespace=_solvers_namespace, body=solvers_secret)
+    kube_client.create_namespaced_secret(
+        namespace=_solvers_namespace, body=solvers_secret
+    )
 
     # Create Role in solvers namespace to allow creating deployments and scaledobjects
     role = client.V1Role(
-        metadata=client.V1ObjectMeta(name="solver-creator", namespace=_solvers_namespace),
+        metadata=client.V1ObjectMeta(
+            name="solver-creator", namespace=_solvers_namespace
+        ),
         rules=[
             client.V1PolicyRule(
                 api_groups=["apps"],
@@ -135,69 +144,71 @@ def start_project_services(project_config, id, user_id):
         },
     }
     try:
-        kube_client.create_namespaced_resource_quota(namespace=_solvers_namespace, body=resource_quota)
+        kube_client.create_namespaced_resource_quota(
+            namespace=_solvers_namespace, body=resource_quota
+        )
     except ApiException as e:
         if e.status == 409:
             pass
         else:
             raise
-        
+
     control_queue = control_queue_name(id)
     solver_director_result_queue = solver_director_result_queue_name()
     result_queue = result_queue_name(id)
     director_queue = project_director_queue_name(id)
-    
 
     _ = kube_client.create_namespaced_pod(
-        namespace=id, body=create_solver_controller_pod_manifest(id, control_queue, result_queue)
+        namespace=id,
+        body=create_solver_controller_pod_manifest(id, control_queue, result_queue),
     )
     _ = kube_client.create_namespaced_service(
         namespace=id,
         body=create_solver_controller_service_manifest(),
     )
 
-
-
     _ = kube_client.create_namespaced_pod(
-        namespace=id, body=create_data_gatherer_pod_manifest(id, control_queue, director_queue, result_queue, solver_director_result_queue)
+        namespace=id,
+        body=create_data_gatherer_pod_manifest(
+            id,
+            control_queue,
+            director_queue,
+            result_queue,
+            solver_director_result_queue,
+        ),
     )
     _ = kube_client.create_namespaced_service(
         namespace=id,
         body=create_data_gatherer_service_manifest(),
     )
-    
-    credentials = pika.PlainCredentials(
-        Config.RabbitMQ.USER,
-        Config.RabbitMQ.PASSWORD
-    )
+
+    credentials = pika.PlainCredentials(Config.RabbitMQ.USER, Config.RabbitMQ.PASSWORD)
     parameters = pika.ConnectionParameters(
-        host=Config.RabbitMQ.HOST,
-        port=Config.RabbitMQ.PORT,
-        credentials=credentials
+        host=Config.RabbitMQ.HOST, port=Config.RabbitMQ.PORT, credentials=credentials
     )
 
     connection = pika.BlockingConnection(parameters)
     try:
         channel = connection.channel()
         channel.queue_declare(queue=director_queue, durable=True)
-        body = json.dumps({"problem_groups": project_config.model_dump()['problem_groups']}).encode()
+        body = json.dumps(
+            {"problem_groups": project_config.model_dump()["problem_groups"]}
+        ).encode()
 
         channel.basic_publish(
-            exchange='',  # Default exchange
+            exchange="",  # Default exchange
             routing_key=director_queue,
             body=body,
-            properties=pika.BasicProperties(
-                delivery_mode=pika.DeliveryMode.Persistent
-            )
+            properties=pika.BasicProperties(delivery_mode=pika.DeliveryMode.Persistent),
         )
     except Exception as e:
         stop_solver_controller(id)
         raise e
     finally:
-        connection.close() 
+        connection.close()
+
 
 def create_solver_controller_pod_manifest(project_id, control_queue, result_queue):
-    solver_director_url = Config.SOLVER_DIRECTOR_URL
     _solvers_namespace = solvers_namespace(project_id)
 
     max_replicas = Config.SolversNamespace.CPU_QUOTA
@@ -229,16 +240,25 @@ def create_solver_controller_pod_manifest(project_id, control_queue, result_queu
                         {"name": "SOLVERS_NAMESPACE", "value": _solvers_namespace},
                         # {"name": "SOLVER_TYPES", "value": "chuffed"},
                         {"name": "CONTROL_QUEUE", "value": control_queue},
-                        {"name": "MAX_TOTAL_SOLVER_REPLICAS", "value": str(max_replicas)},
+                        {
+                            "name": "MAX_TOTAL_SOLVER_REPLICAS",
+                            "value": str(max_replicas),
+                        },
                         # {"name": "SOLVER_DIRECTOR_URL", "value": solver_director_url},
-                        {"name": "KEDA_QUEUE_LENGTH", "value": Config.Keda.KEDA_QUEUE_LENGTH},
+                        {
+                            "name": "KEDA_QUEUE_LENGTH",
+                            "value": Config.Keda.KEDA_QUEUE_LENGTH,
+                        },
                         {"name": "RABBITMQ_HOST", "value": Config.RabbitMQ.HOST},
                         {"name": "RABBITMQ_PORT", "value": str(Config.RabbitMQ.PORT)},
                         {"name": "RABBITMQ_USER", "value": Config.RabbitMQ.USER},
-                        {"name": "RABBITMQ_PASSWORD", "value": Config.RabbitMQ.PASSWORD},
+                        {
+                            "name": "RABBITMQ_PASSWORD",
+                            "value": Config.RabbitMQ.PASSWORD,
+                        },
                     ],
                     "volumeMounts": [
-                        {"name": "tmp", "mountPath": "/tmp"},
+                        {"name": "tmp", "mountPath": "/tmp"},  # nosec
                     ],
                     "securityContext": {
                         "allowPrivilegeEscalation": False,
@@ -275,8 +295,13 @@ def create_solver_controller_service_manifest():
     }
 
 
-def create_data_gatherer_pod_manifest(project_id, control_queue, director_queue, result_queue, solver_director_result_queue):
-
+def create_data_gatherer_pod_manifest(
+    project_id,
+    control_queue,
+    director_queue,
+    result_queue,
+    solver_director_result_queue,
+):
     return {
         "apiVersion": "v1",
         "kind": "Pod",
@@ -302,14 +327,20 @@ def create_data_gatherer_pod_manifest(project_id, control_queue, director_queue,
                         {"name": "CONTROL_QUEUE", "value": control_queue},
                         {"name": "DIRECTOR_QUEUE", "value": director_queue},
                         {"name": "PROJECT_SOLVER_RESULT_QUEUE", "value": result_queue},
-                        {"name": "SOLVER_DIRECTOR_RESULT_QUEUE", "value": solver_director_result_queue},
+                        {
+                            "name": "SOLVER_DIRECTOR_RESULT_QUEUE",
+                            "value": solver_director_result_queue,
+                        },
                         {"name": "RABBITMQ_HOST", "value": Config.RabbitMQ.HOST},
                         {"name": "RABBITMQ_PORT", "value": str(Config.RabbitMQ.PORT)},
                         {"name": "RABBITMQ_USER", "value": Config.RabbitMQ.USER},
-                        {"name": "RABBITMQ_PASSWORD", "value": Config.RabbitMQ.PASSWORD},
+                        {
+                            "name": "RABBITMQ_PASSWORD",
+                            "value": Config.RabbitMQ.PASSWORD,
+                        },
                     ],
                     "volumeMounts": [
-                        {"name": "tmp", "mountPath": "/tmp"},
+                        {"name": "tmp", "mountPath": "/tmp"},  # nosec
                     ],
                     "securityContext": {
                         "allowPrivilegeEscalation": False,

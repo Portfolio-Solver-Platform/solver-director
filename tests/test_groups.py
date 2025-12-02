@@ -208,14 +208,18 @@ def test_update_group_solvers_only(client_with_db, test_db):
     group_id = create_response.json()["id"]
 
     # Create solvers
-    solver_image1 = SolverImage(image_name="solver1", image_path="harbor.local/psp-solvers/solver1:latest")
+    solver_image1 = SolverImage(
+        image_name="solver1", image_path="harbor.local/psp-solvers/solver1:latest"
+    )
     test_db.add(solver_image1)
     test_db.flush()
 
     solver1 = Solver(name="solver1", solver_image_id=solver_image1.id)
     test_db.add(solver1)
 
-    solver_image2 = SolverImage(image_name="solver2", image_path="harbor.local/psp-solvers/solver2:latest")
+    solver_image2 = SolverImage(
+        image_name="solver2", image_path="harbor.local/psp-solvers/solver2:latest"
+    )
     test_db.add(solver_image2)
     test_db.flush()
 
@@ -244,7 +248,9 @@ def test_update_group_all_fields(client_with_db, test_db):
     group_id = create_response.json()["id"]
 
     # Create solver
-    solver_image = SolverImage(image_name="solver", image_path="harbor.local/psp-solvers/solver:latest")
+    solver_image = SolverImage(
+        image_name="solver", image_path="harbor.local/psp-solvers/solver:latest"
+    )
     test_db.add(solver_image)
     test_db.flush()
 
@@ -336,7 +342,9 @@ def test_update_group_duplicate_solver_ids(client_with_db, test_db):
     group_id = create_response.json()["id"]
 
     # Create solver
-    solver_image = SolverImage(image_name="solver", image_path="harbor.local/psp-solvers/solver:latest")
+    solver_image = SolverImage(
+        image_name="solver", image_path="harbor.local/psp-solvers/solver:latest"
+    )
     test_db.add(solver_image)
     test_db.flush()
 

@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
 import asyncio
 import re
-import requests
 import json
 import base64
 import tempfile
@@ -132,7 +131,9 @@ def get_solvers(db: Annotated[Session, Depends(get_db)]):
     return SolversResponse(solvers=solver_items)
 
 
-@router.get("/solvers/{id}", response_model=SolverDetailResponse, summary="Get solver by ID")
+@router.get(
+    "/solvers/{id}", response_model=SolverDetailResponse, summary="Get solver by ID"
+)
 def get_solver_by_id(id: int, db: Annotated[Session, Depends(get_db)]):
     """Get solver details by ID"""
     solver = db.query(Solver).join(Solver.solver_image).filter(Solver.id == id).first()
@@ -142,15 +143,21 @@ def get_solver_by_id(id: int, db: Annotated[Session, Depends(get_db)]):
             detail=f"Solver with id {id} not found",
         )
     return SolverDetailResponse.from_solver_with_image(solver)
-        
 
 
 @router.post(
     "/solvers", response_model=SolverUploadResponse, status_code=status.HTTP_201_CREATED
 )
 async def upload_solver(
-    image_name: Annotated[str, Form(description="Docker image name for Harbor (e.g., 'minizinc-solver')")],
-    names: Annotated[str, Form(description="Comma-separated solver names (e.g., 'chuffed,gecode,ortools')")],
+    image_name: Annotated[
+        str, Form(description="Docker image name for Harbor (e.g., 'minizinc-solver')")
+    ],
+    names: Annotated[
+        str,
+        Form(
+            description="Comma-separated solver names (e.g., 'chuffed,gecode,ortools')"
+        ),
+    ],
     file: Annotated[UploadFile, File(description="Docker image tarball (.tar file)")],
     db: Annotated[Session, Depends(get_db)],
 ):
@@ -191,7 +198,11 @@ async def upload_solver(
                 detail=f"Solver name '{name}' is invalid. Must be lowercase alphanumeric, may contain dots, hyphens, or underscores, and must start with a letter or digit",
             )
 
-    existing_image = db.query(SolverImage).filter(SolverImage.image_name == normalized_image_name).first()
+    existing_image = (
+        db.query(SolverImage)
+        .filter(SolverImage.image_name == normalized_image_name)
+        .first()
+    )
     if existing_image:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -259,7 +270,9 @@ async def upload_solver(
                 detail=f"Failed to push image to Harbor: {stderr.decode('utf-8')}",
             )
 
-        solver_image = SolverImage(image_name=normalized_image_name, image_path=external_image_name)
+        solver_image = SolverImage(
+            image_name=normalized_image_name, image_path=external_image_name
+        )
         db.add(solver_image)
         db.flush()
 
@@ -274,7 +287,7 @@ async def upload_solver(
             id=solver_image.id,
             names=name_list,
             solver_images_id=solver_image.id,
-            image_path=external_image_name
+            image_path=external_image_name,
         )
 
     except HTTPException:

@@ -1,7 +1,6 @@
 from sqlalchemy import (
     BigInteger,
     Column,
-    Float,
     Integer,
     String,
     ForeignKey,
@@ -9,7 +8,6 @@ from sqlalchemy import (
     LargeBinary,
     DateTime,
     Boolean,
-    ARRAY,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
@@ -140,14 +138,16 @@ class Project(Base):
 
 class ProjectResult(Base):
     __tablename__ = "project_results"
-    
+
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
-    problem_id = Column(Integer, nullable=False)                                                                               
-    instance_id = Column(Integer, nullable=False)                                                                              
-    solver_id = Column(Integer, nullable=False)                                                                                
-    result = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)                                                
-    vcpus = Column(Integer, nullable=False)                                                                                    
+    project_id = Column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    problem_id = Column(Integer, nullable=False)
+    instance_id = Column(Integer, nullable=False)
+    solver_id = Column(Integer, nullable=False)
+    result = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
+    vcpus = Column(Integer, nullable=False)
 
     project = relationship("Project", backref="results")
 
@@ -160,4 +160,4 @@ class ProjectResult(Base):
             solver_id=data["solver_id"],
             vcpus=data["vcpus"],
             result=data["result"],
-        )    
+        )

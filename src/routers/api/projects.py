@@ -17,7 +17,6 @@ from src.config import Config
 from src.schemas import ProjectConfiguration
 from src.auth import auth
 from psp_auth import User
-import pika
 from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
@@ -246,7 +245,9 @@ async def get_project_solution(
     return StreamingResponse(
         data_streamer(app.state.pool, uuid_id),
         media_type="application/json",
-        headers={"Content-Disposition": f"attachment; filename=project_{project_id}.json"}
+        headers={
+            "Content-Disposition": f"attachment; filename=project_{project_id}.json"
+        },
     )
 
 
@@ -292,4 +293,3 @@ def delete_project(
     db.delete(project)
     db.commit()
     return None
-

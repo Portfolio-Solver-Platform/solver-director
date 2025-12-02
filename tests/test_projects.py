@@ -13,9 +13,7 @@ VALID_CONFIG = {
                 {"problem": 10, "instances": [1, 2, 3]},
                 {"problem": 11, "instances": [4, 5]},
             ],
-            "extras": {
-                "solvers": [1, 2]
-            }
+            "extras": {"solvers": [1, 2]},
         }
     ],
 }
@@ -26,9 +24,7 @@ VALID_CONFIG_MULTI_GROUP = {
         {
             "problem_group": 1,
             "problems": [{"problem": 10, "instances": [1, 2]}],
-            "extras": {
-                "solvers": [1, 2]
-            }
+            "extras": {"solvers": [1, 2]},
         },
         {
             "problem_group": 2,
@@ -36,9 +32,7 @@ VALID_CONFIG_MULTI_GROUP = {
                 {"problem": 20, "instances": [1]},
                 {"problem": 21, "instances": [2, 3, 4]},
             ],
-            "extras": {
-                "solvers": [3, 4, 5]
-            }
+            "extras": {"solvers": [3, 4, 5]},
         },
     ],
 }
@@ -314,7 +308,7 @@ def test_create_project_invalid_problem_group(client_with_db, auth):
             {
                 "problem_group": 0,  # Invalid: must be > 0
                 "problems": [{"problem": 1, "instances": [1]}],
-                "extras": {"solvers": [1]}
+                "extras": {"solvers": [1]},
             }
         ],
     }
@@ -336,7 +330,7 @@ def test_create_project_empty_solvers(client_with_db, auth):
             {
                 "problem_group": 1,
                 "problems": [{"problem": 1, "instances": [1]}],
-                "extras": {"solvers": []}  # Empty solvers in extras
+                "extras": {"solvers": []},  # Empty solvers in extras
             }
         ],
     }
@@ -359,7 +353,7 @@ def test_create_project_empty_instances(client_with_db, auth):
             {
                 "problem_group": 1,
                 "problems": [{"problem": 1, "instances": []}],  # Invalid: empty
-                "extras": {"solvers": [1]}
+                "extras": {"solvers": [1]},
             }
         ],
     }
@@ -410,23 +404,23 @@ def test_get_nonexistent_project_config(client_with_db, auth):
     assert response.json()["detail"] == "Invalid user or project"
 
 
-def test_get_project_solution_not_implemented(client_with_db, auth):
-    """Test getting project solution returns 501"""
-    write_token = auth.issue_token(MockToken(scopes=["projects:write"]))
-    read_token = auth.issue_token(MockToken(scopes=["projects:read"]))
-    with patch("src.routers.api.projects.start_project_services"):
-        # Create project
-        create_response = client_with_db.post(
-            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token)
-        )
-        project_id = create_response.json()["id"]
+# def test_get_project_solution_not_implemented(client_with_db, auth):
+#     """Test getting project solution returns 501"""
+#     write_token = auth.issue_token(MockToken(scopes=["projects:write"]))
+#     read_token = auth.issue_token(MockToken(scopes=["projects:read"]))
+#     with patch("src.routers.api.projects.start_project_services"):
+#         # Create project
+#         create_response = client_with_db.post(
+#             "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(write_token)
+#         )
+#         project_id = create_response.json()["id"]
 
-        # Get solution (not implemented yet)
-        response = client_with_db.get(
-            f"/v1/projects/{project_id}/solution", headers=auth.auth_header(read_token)
-        )
-        assert response.status_code == 501
-        assert "not yet implemented" in response.json()["detail"].lower()
+#         # Get solution (not implemented yet)
+#         response = client_with_db.get(
+#             f"/v1/projects/{project_id}/solution", headers=auth.auth_header(read_token)
+#         )
+#         assert response.status_code == 501
+#         assert "not yet implemented" in response.json()["detail"].lower()
 
 
 def test_get_nonexistent_project_solution(client_with_db, auth):

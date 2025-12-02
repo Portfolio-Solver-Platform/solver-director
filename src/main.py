@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
         password=Config.Database.PASSWORD,
         database=Config.Database.NAME,
         min_size=1,
-        max_size=10
+        max_size=10,
     )
 
     # Start result collector background task
@@ -38,7 +38,6 @@ app = FastAPI(
     description=Config.Api.DESCRIPTION,
     version=Config.App.VERSION,
     lifespan=lifespan,
-
 )
 
 

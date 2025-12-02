@@ -8,8 +8,7 @@ class ProblemConfig(BaseModel):
     problem: int = Field(..., description="Problem ID", gt=0)
     instances: list[int] = Field(..., description="List of instance IDs", min_length=1)
 
-    
-    
+
 # class SolverConfig(BaseModel):
 #     """Solver Configuration"""
 #     id: int = Field(..., description="Solver ID", gt=0)
@@ -26,8 +25,9 @@ class ProblemGroupConfig(BaseModel):
     )
     extras: dict[str, Any] = Field(
         default_factory=dict,
-        description="Extra configurations (e.g., repetitions, solvers)"
+        description="Extra configurations (e.g., repetitions, solvers)",
     )
+
 
 class ProjectConfiguration(BaseModel):
     """Full project configuration with multiple problem groups"""
