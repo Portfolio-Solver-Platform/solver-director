@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    BigInteger,
     Column,
     Integer,
     String,
@@ -53,6 +54,7 @@ problem_groups = Table(
 class SolverImage(Base):
     __tablename__ = "solver_images"
     id = Column(Integer, primary_key=True, autoincrement=True)
+    image_name = Column(String, nullable=False, unique=True)
     image_path = Column(String, nullable=False)
 
     solvers = relationship("Solver", back_populates="solver_image")
@@ -78,7 +80,7 @@ class Solver(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
-    solver_images_id = Column(
+    solver_image_id = Column(
         Integer, ForeignKey("solver_images.id", ondelete="CASCADE"), nullable=False
     )
 
@@ -132,3 +134,30 @@ class Project(Base):
     name = Column(String, nullable=False)
     configuration = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class ProjectResult(Base):
+    __tablename__ = "project_results"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    project_id = Column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    problem_id = Column(Integer, nullable=False)
+    instance_id = Column(Integer, nullable=False)
+    solver_id = Column(Integer, nullable=False)
+    result = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
+    vcpus = Column(Integer, nullable=False)
+
+    project = relationship("Project", backref="results")
+
+    @classmethod
+    def from_json(cls, data: dict):
+        return cls(
+            project_id=data["project_id"],
+            problem_id=data["problem_id"],
+            instance_id=data["instance_id"],
+            solver_id=data["solver_id"],
+            vcpus=data["vcpus"],
+            result=data["result"],
+        )

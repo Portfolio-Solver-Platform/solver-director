@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
 import asyncio
 import re
-import requests
 import json
 import base64
 import tempfile
@@ -75,98 +74,146 @@ class StartResponse(BaseModel):
     project_id: str = Field(..., description="project id to start")
 
 
-class SolversResponse(BaseModel):
-    solvers: list[str] = Field(..., description="List of available solver names")
-
-
-class SolverResponse(BaseModel):
+class SolverListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     name: str
-    solver_images_id: int
+    image_name: str
     image_path: str
 
     @staticmethod
-    def from_solver_with_image(solver: Solver) -> "SolverResponse":
-        """Create response from Solver with joined SolverImage"""
-        return SolverResponse(
+    def from_solver_with_image(solver: Solver) -> "SolverListItem":
+        return SolverListItem(
             id=solver.id,
             name=solver.name,
-            solver_images_id=solver.solver_images_id,
+            image_name=solver.solver_image.image_name,
             image_path=solver.solver_image.image_path,
         )
 
 
-@router.get("/solvers", response_model=SolversResponse, summary="Get available solvers")
-def get_solvers():
-    """Get list of available solvers from Harbor registry"""
-    try:
-        username, password = get_harbor_credentials()
-        url = "http://harbor-core.harbor.svc.cluster.local/api/v2.0/projects/psp-solvers/repositories"
+class SolversResponse(BaseModel):
+    solvers: list[SolverListItem]
 
-        response = requests.get(url, auth=(username, password), timeout=10)
-        response.raise_for_status()
 
-        repositories = response.json()
+class SolverDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-        # Strip "psp-solvers/" prefix from repository names
-        solvers = [repo["name"].replace("psp-solvers/", "") for repo in repositories]
+    id: int
+    name: str
+    image_name: str
+    image_path: str
 
-        return SolversResponse(solvers=solvers)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Failed to fetch solvers from Harbor: {str(e)}",
+    @staticmethod
+    def from_solver_with_image(solver: Solver) -> "SolverDetailResponse":
+        return SolverDetailResponse(
+            id=solver.id,
+            name=solver.name,
+            image_name=solver.solver_image.image_name,
+            image_path=solver.solver_image.image_path,
         )
 
 
+class SolverUploadResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    names: list[str]
+    solver_images_id: int
+    image_path: str
+
+
+@router.get("/solvers", response_model=SolversResponse, summary="Get all solvers")
+def get_solvers(db: Annotated[Session, Depends(get_db)]):
+    """Get list of all solvers with their IDs from database"""
+    solvers = db.query(Solver).join(Solver.solver_image).all()
+    solver_items = [SolverListItem.from_solver_with_image(solver) for solver in solvers]
+    return SolversResponse(solvers=solver_items)
+
+
+@router.get(
+    "/solvers/{id}", response_model=SolverDetailResponse, summary="Get solver by ID"
+)
+def get_solver_by_id(id: int, db: Annotated[Session, Depends(get_db)]):
+    """Get solver details by ID"""
+    solver = db.query(Solver).join(Solver.solver_image).filter(Solver.id == id).first()
+    if not solver:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Solver with id {id} not found",
+        )
+    return SolverDetailResponse.from_solver_with_image(solver)
+
+
 @router.post(
-    "/solvers", response_model=SolverResponse, status_code=status.HTTP_201_CREATED
+    "/solvers", response_model=SolverUploadResponse, status_code=status.HTTP_201_CREATED
 )
 async def upload_solver(
-    name: Annotated[str, Form()],
+    image_name: Annotated[
+        str, Form(description="Docker image name for Harbor (e.g., 'minizinc-solver')")
+    ],
+    names: Annotated[
+        str,
+        Form(
+            description="Comma-separated solver names (e.g., 'chuffed,gecode,ortools')"
+        ),
+    ],
     file: Annotated[UploadFile, File(description="Docker image tarball (.tar file)")],
     db: Annotated[Session, Depends(get_db)],
 ):
     """Upload a Docker image tarball and push to Harbor
 
     Args:
-        name: Solver name (e.g., "gecode")
+        image_name: Docker image name for Harbor (e.g., "minizinc-solver")
+        names: Comma-separated solver names that this image supports (e.g., "chuffed,gecode,ortools")
         file: Docker image tarball (.tar file)
 
     Returns:
         SolverResponse with solver metadata including Harbor image path
     """
-    # Validate name
-    normalized_name = name.strip().lower()
-    if not normalized_name:
+    normalized_image_name = image_name.strip().lower()
+    if not normalized_image_name:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Solver name cannot be empty",
+            detail="Image name cannot be empty",
         )
 
-    if not VALID_IMAGE_NAME.match(normalized_name):
+    if not VALID_IMAGE_NAME.match(normalized_image_name):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Solver name must be lowercase alphanumeric, may contain dots, hyphens, or underscores, and must start with a letter or digit",
+            detail="Image name must be lowercase alphanumeric, may contain dots, hyphens, or underscores, and must start with a letter or digit",
         )
 
-    # Check for duplicate solver name
-    existing = db.query(Solver).filter(Solver.name == normalized_name).first()
-    if existing:
+    name_list = [n.strip().lower() for n in names.split(",") if n.strip()]
+    if not name_list:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="At least one solver name is required",
+        )
+
+    for name in name_list:
+        if not VALID_IMAGE_NAME.match(name):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"Solver name '{name}' is invalid. Must be lowercase alphanumeric, may contain dots, hyphens, or underscores, and must start with a letter or digit",
+            )
+
+    existing_image = (
+        db.query(SolverImage)
+        .filter(SolverImage.image_name == normalized_image_name)
+        .first()
+    )
+    if existing_image:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Solver with name '{normalized_name}' already exists",
+            detail=f"Solver image '{normalized_image_name}' already exists",
         )
 
-    # Validate file
     if not file:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="File is required"
         )
 
-    # Read file data to check if empty
     file_data = await file.read()
     if not file_data:
         raise HTTPException(
@@ -174,21 +221,16 @@ async def upload_solver(
             detail="File cannot be empty",
         )
 
-    # Save tarball to temporary file
     tarball_path = None
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".tar") as tmp:
             tmp.write(file_data)
             tarball_path = tmp.name
 
-        # Get Harbor credentials
         username, password = get_harbor_credentials()
 
-        # Push to Harbor using skopeo
-        # Use REGISTRY_URL for internal cluster communication
-        registry_image_name = f"{Config.ArtifactRegistry.INTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
-        # Use URL for storing in database (external reference)
-        external_image_name = f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_name}:latest"
+        registry_image_name = f"{Config.ArtifactRegistry.INTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_image_name}:latest"
+        external_image_name = f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_image_name}:latest"
 
         skopeo_args = [
             "skopeo",
@@ -199,7 +241,6 @@ async def upload_solver(
             f"{username}:{password}",
         ]
 
-        # Add TLS verification flag
         if not Config.ArtifactRegistry.TLS_VERIFY:
             skopeo_args.append("--dest-tls-verify=false")
 
@@ -229,19 +270,25 @@ async def upload_solver(
                 detail=f"Failed to push image to Harbor: {stderr.decode('utf-8')}",
             )
 
-        # Create SolverImage record with external image path
-        solver_image = SolverImage(image_path=external_image_name)
+        solver_image = SolverImage(
+            image_name=normalized_image_name, image_path=external_image_name
+        )
         db.add(solver_image)
-        db.flush()  # Get the ID without committing
+        db.flush()
 
-        # Create Solver record
-        solver = Solver(name=normalized_name, solver_images_id=solver_image.id)
-        db.add(solver)
+        for name in name_list:
+            solver = Solver(name=name, solver_image_id=solver_image.id)
+            db.add(solver)
+
         db.commit()
-        db.refresh(solver)
+        db.refresh(solver_image)
 
-        # Return solver response
-        return SolverResponse.from_solver_with_image(solver)
+        return SolverUploadResponse(
+            id=solver_image.id,
+            names=name_list,
+            solver_images_id=solver_image.id,
+            image_path=external_image_name,
+        )
 
     except HTTPException:
         db.rollback()
@@ -253,10 +300,8 @@ async def upload_solver(
             detail=f"Failed to upload solver: {str(e)}",
         )
     finally:
-        # Clean up temporary file
         if tarball_path and os.path.exists(tarball_path):
             try:
                 os.unlink(tarball_path)
             except Exception:
-                # Log cleanup failure to Prometheus
                 temp_file_cleanup_failures.labels(operation="solver_upload").inc()

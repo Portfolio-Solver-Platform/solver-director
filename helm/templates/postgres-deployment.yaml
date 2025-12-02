@@ -17,6 +17,7 @@ spec:
       securityContext:
         runAsNonRoot: {{ .Values.postgres.securityContext.runAsNonRoot }}
         runAsUser: {{ .Values.postgres.securityContext.runAsUser }}
+        fsGroup: {{ .Values.postgres.securityContext.runAsUser }}
         seccompProfile:
           type: RuntimeDefault
       containers:

@@ -1,5 +1,6 @@
 from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Depends, status
+from src.project_utils.data_streamer import data_streamer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
@@ -16,7 +17,7 @@ from src.config import Config
 from src.schemas import ProjectConfiguration
 from src.auth import auth
 from psp_auth import User
-import pika
+from fastapi.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ def create_project(
         )
 
     try:
-        start_project_services(str(project.id), user.id)
+        start_project_services(config, str(project.id), user.id)
     except Exception as e:
         db.rollback()
         logger.error(
@@ -92,17 +93,6 @@ def create_project(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to create project",
-        )
-
-    try:
-        publish_to_data_gatherer(
-            message=f"Project {project.user_id} accessed",
-            queue_name=str(project.id),
-        )
-    except Exception as e:
-        # RabbitMQ telemetry is optional - don't fail project creation
-        logger.warning(
-            f"Failed to publish to data gatherer for project {project.id}: {e}"
         )
 
     try:
@@ -231,12 +221,12 @@ scopes = [SCOPES["read"]]
     dependencies=[auth.require_scopes(scopes)],
     openapi_extra=auth.scope_docs(scopes),
 )
-def get_project_solution(
+async def get_project_solution(
     project_id: str,
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(auth.user())],
 ):
-    """Get project solution/results (not yet implemented)"""
+    """Get project solution/results"""
     try:
         uuid_id = UUID(project_id)
     except ValueError:
@@ -250,10 +240,14 @@ def get_project_solution(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
         )
 
-    # TODO: Implement solution retrieval
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Solution retrieval not yet implemented",
+    from src.main import app
+
+    return StreamingResponse(
+        data_streamer(app.state.pool, uuid_id),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f"attachment; filename=project_{project_id}.json"
+        },
     )
 
 
@@ -299,29 +293,3 @@ def delete_project(
     db.delete(project)
     db.commit()
     return None
-
-
-def publish_to_data_gatherer(message: str, queue_name: str):
-    """Send a message to data-gatherer via RabbitMQ using OAuth2"""
-    # # Get JWT token from Keycloak
-    # token = get_rabbitmq_token()
-
-    # # Use token as password, empty username for OAuth2
-    # credentials = pika.PlainCredentials("", token)
-    credentials = pika.PlainCredentials(Config.RabbitMQ.USER, Config.RabbitMQ.PASSWORD)
-    parameters = pika.ConnectionParameters(
-        host=Config.RabbitMQ.HOST, port=Config.RabbitMQ.PORT, credentials=credentials
-    )
-
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-
-    channel.queue_declare(queue=queue_name, durable=True)
-    channel.basic_publish(
-        exchange="",
-        routing_key=queue_name,
-        body=message,
-        properties=pika.BasicProperties(delivery_mode=2),  # persistent
-    )
-
-    connection.close()
