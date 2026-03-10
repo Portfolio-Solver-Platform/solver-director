@@ -33,6 +33,11 @@ class ProjectConfiguration(BaseModel):
     """Full project configuration with multiple problem groups"""
 
     name: str = Field(..., description="Name of the project")
+    timeout: int = Field(
+        ...,
+        description="Maximum time in seconds for a single solve. Also used as the graceful shutdown period for solver pods.",
+        gt=0,
+    )
     problem_groups: list[ProblemGroupConfig] = Field(
         ..., description="List of problem group configurations", min_length=1
     )

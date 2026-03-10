@@ -6,6 +6,7 @@ from psp_auth.testing import MockToken, MockUser
 # Test data
 VALID_CONFIG = {
     "name": "Test Project",
+    "timeout": 3600,
     "problem_groups": [
         {
             "problem_group": 1,
@@ -20,6 +21,7 @@ VALID_CONFIG = {
 
 VALID_CONFIG_MULTI_GROUP = {
     "name": "Multi-Group Project",
+    "timeout": 7200,
     "problem_groups": [
         {
             "problem_group": 1,
@@ -304,6 +306,7 @@ def test_create_project_invalid_problem_group(client_with_db, auth):
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
     invalid_config = {
         "name": "Invalid Project",
+        "timeout": 3600,
         "problem_groups": [
             {
                 "problem_group": 0,  # Invalid: must be > 0
@@ -326,6 +329,7 @@ def test_create_project_empty_solvers(client_with_db, auth):
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
     invalid_config = {
         "name": "Invalid Project",
+        "timeout": 3600,
         "problem_groups": [
             {
                 "problem_group": 1,
@@ -349,6 +353,7 @@ def test_create_project_empty_instances(client_with_db, auth):
     token = auth.issue_token(MockToken(scopes=["projects:write"]))
     invalid_config = {
         "name": "Invalid Project",
+        "timeout": 3600,
         "problem_groups": [
             {
                 "problem_group": 1,

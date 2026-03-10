@@ -160,7 +160,7 @@ def start_project_services(project_config, id, user_id):
 
     _ = kube_client.create_namespaced_pod(
         namespace=id,
-        body=create_solver_controller_pod_manifest(id, control_queue, result_queue),
+        body=create_solver_controller_pod_manifest(id, control_queue, result_queue, project_config.timeout),
     )
     _ = kube_client.create_namespaced_service(
         namespace=id,
@@ -208,7 +208,7 @@ def start_project_services(project_config, id, user_id):
         connection.close()
 
 
-def create_solver_controller_pod_manifest(project_id, control_queue, result_queue):
+def create_solver_controller_pod_manifest(project_id, control_queue, result_queue, timeout):
     _solvers_namespace = solvers_namespace(project_id)
 
     max_replicas = Config.SolversNamespace.CPU_QUOTA
@@ -248,6 +248,10 @@ def create_solver_controller_pod_manifest(project_id, control_queue, result_queu
                         {
                             "name": "KEDA_QUEUE_LENGTH",
                             "value": Config.Keda.KEDA_QUEUE_LENGTH,
+                        },
+                        {
+                            "name": "SOLVER_TIMEOUT",
+                            "value": str(timeout),
                         },
                         {"name": "RABBITMQ_HOST", "value": Config.RabbitMQ.HOST},
                         {"name": "RABBITMQ_PORT", "value": str(Config.RabbitMQ.PORT)},
