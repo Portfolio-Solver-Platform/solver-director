@@ -2,19 +2,24 @@
 name = "solver-director"
 version = "0.1.0"
 dependencies = [
-    "fastapi[standard]>=0.120,<0.121",
+    "fastapi[standard]>=0.135,<0.136",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0",
     "psycopg2-binary>=2.9.11,<3.0",
-    "sqlalchemy>=2.0.44,<3.0",
-    "alembic>=1.0,<2.0",
-    "gunicorn>=23.0,<24.0",
-    "kubernetes>=34.1,<35.0",
+    "sqlalchemy>=2.0.48,<3.0",
+    "alembic>=1.18,<2.0",
+    "gunicorn>=25.0,<26.0",
+    "kubernetes>=35.0,<36.0",
     "requests>=2.32.5,<3.0",
     "pika>=1,<2.0",
-    "aio-pika>=9.0,<10.0",
+    "aio-pika>=9.6,<10.0",
     "dacite>=1.8,<2.0",
-    "psp-auth>=1.1.0,<2.0",
+    "psp-auth>=2,<3.0",
     "asyncpg>=0.31.0,<1.0",
+    # Security: minimum versions required to satisfy vulnerability checks          
+    "cryptography>=46.0.5",
+    "joserfc>=1.6.3",
+    "python-multipart>=0.0.22",
+    "urllib3>=2.6.3",
 ]
 
 [project.optional-dependencies]
@@ -22,10 +27,11 @@ dev = [
     "pytest>=9,<10",
     "pytest-cov>=7,<8",
     "pytest-mock>=3.15,<4.0",
-    "ruff>=0.14.1,<0.15.0",
-    "bandit>=1.8,<2.0",
-    "pip-audit>=2.9,<3.0",
+    "ruff>=0.15.0,<0.16.0",
+    "bandit>=1.9,<2.0",
+    "pip-audit>=2.10,<3.0",
     "httpx>=0.28.1,<1",
+    "filelock>=3.20.3",
 ]
 
 [tool.pytest.ini_options]
