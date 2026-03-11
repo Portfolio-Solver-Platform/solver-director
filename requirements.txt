@@ -37,8 +37,10 @@ click==8.3.1
     #   rich-toolkit
     #   typer
     #   uvicorn
-cryptography==46.0.3
-    # via joserfc
+cryptography==46.0.5
+    # via
+    #   joserfc
+    #   solver-director (pyproject.toml)
 dacite==1.9.2
     # via solver-director (pyproject.toml)
 dnspython==2.8.0
@@ -87,8 +89,10 @@ itsdangerous==2.2.0
     # via psp-auth
 jinja2==3.1.6
     # via fastapi
-joserfc==1.4.3
-    # via psp-auth
+joserfc==1.6.3
+    # via
+    #   psp-auth
+    #   solver-director (pyproject.toml)
 kubernetes==35.0.0
     # via solver-director (pyproject.toml)
 mako==1.3.10
@@ -143,8 +147,10 @@ python-dotenv==1.2.1
     # via
     #   pydantic-settings
     #   uvicorn
-python-multipart==0.0.20
-    # via fastapi
+python-multipart==0.0.22
+    # via
+    #   fastapi
+    #   solver-director (pyproject.toml)
 pyyaml==6.0.3
     # via
     #   kubernetes
@@ -204,11 +210,12 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
     #   pydantic-settings
-urllib3==2.3.0
+urllib3==2.6.3
     # via
     #   kubernetes
     #   requests
     #   sentry-sdk
+    #   solver-director (pyproject.toml)
 uvicorn==0.38.0
     # via
     #   fastapi
