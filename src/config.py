@@ -48,6 +48,7 @@ class Config:
     class RabbitMQ:
         HOST = os.getenv("RABBITMQ_HOST", "rabbitmq.rabbit-mq.svc.cluster.local")
         PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
+        MANAGEMENT_PORT = 15672
         USER = os.getenv("RABBITMQ_USER", "guest")
         PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
         SOLVER_DIRECTOR_RESULT_QUEUE = "solver_director_result_queue"
