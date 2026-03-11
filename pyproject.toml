@@ -15,6 +15,7 @@ dependencies = [
     "dacite>=1.8,<2.0",
     "psp-auth>=2,<3.0",
     "asyncpg>=0.31.0,<1.0",
+    # Security: minimum versions required to satisfy vulnerability checks          
     "cryptography>=46.0.5",
     "joserfc>=1.6.3",
     "python-multipart>=0.0.22",
