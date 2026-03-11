@@ -1,0 +1,6 @@
+# No fixed version available upstream (as of 2026-03-11)
+# GnuPG stack-based buffer overflow in tpm2daemon (pulled in by skopeo)
+CVE-2026-24882
+
+# glibc integer overflow in memalign - no Debian fix available
+CVE-2026-0861
