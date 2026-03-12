@@ -5,7 +5,7 @@ from src.spawner.stop_service import stop_solver_controller
 from src.utils import solver_director_result_queue_name
 from src.database import SessionLocal
 from src.config import Config
-from src.models import ProjectResult
+from src.models import Project, ProjectResult
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,11 @@ async def result_collector():
                                 logger.warning(
                                     f"Failed to cleanup project {result_json.get('project_id')}: {cleanup_error}"
                                 )
+                            project = db.query(Project).filter(
+                                Project.id == result_json["project_id"]
+                            ).first()
+                            if project:
+                                project.is_complete = True
                             result_json.pop("final_message", None)
                             result_json.pop("total_messages", None)
 

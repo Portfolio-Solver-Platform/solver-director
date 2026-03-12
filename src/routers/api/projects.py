@@ -173,6 +173,8 @@ def get_project_status(
             detail="Project status temporarily unavailable",
         )
 
+    status_data["isFinished"] = project.is_complete
+
     return ProjectWithStatusResponse(
         id=project.id,
         user_id=project.user_id,
