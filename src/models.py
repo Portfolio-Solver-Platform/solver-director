@@ -134,6 +134,7 @@ class Project(Base):
     name = Column(String, nullable=False)
     configuration = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    is_complete = Column(Boolean, nullable=False, default=False, server_default="false")
 
 
 class ProjectResult(Base):
