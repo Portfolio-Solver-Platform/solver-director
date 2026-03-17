@@ -1,0 +1,24 @@
+name: Publish Docker image
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yaml
+
+  push:
+    needs: ci
+
+    permissions:
+      contents: read
+      packages: write
+
+    uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/push-image.yaml@main
+    with:
+      image_name: solver-controller
+    #   file_name: 'user.yaml'
+    #   infrastructure_bot_id: ${{ vars.INFRASTRUCTURE_BOT_APP_ID }}
+    # secrets:
+    #   infrastructure_bot_private_key: ${{ secrets.INFRASTRUCTURE_BOT_PRIVATE_KEY }}
