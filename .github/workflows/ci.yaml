@@ -1,77 +1,14 @@
 name: CI
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
-env:
-  CI_IMAGE: local-ci:${{ github.sha }}
-
 jobs:
   ci:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
+    permissions:
+      contents: read
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: dev
-          tags: ${{ env.CI_IMAGE }}
-          load: true
-          pull: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max,ignore-error=true
-
-      - name: Lint
-        run: docker run --rm $CI_IMAGE ruff check src/ --no-cache
-
-      - name: Test
-        run: docker run --rm $CI_IMAGE pytest -q -p no:cacheprovider
-
-      - name: Audit code
-        run: docker run --rm $CI_IMAGE bandit . -qrx ./tests
-
-      - name: Dependency audit
-        run: docker run --rm $CI_IMAGE pip-audit --ignore-vuln GHSA-48p4-8xcf-vxj5 --ignore-vuln GHSA-pq67-6m6q-mj2v
-
-      - name: Cache Trivy DB
-        uses: actions/cache@v4
-        with:
-          path: .trivycache
-          key: ${{ runner.os }}-trivy-db
-          restore-keys: ${{ runner.os }}-trivy-
-
-      - name: Trivy scan (image)
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.CI_IMAGE }}
-          format: table
-          exit-code: 1
-          severity: HIGH,CRITICAL
-          vuln-type: "os,library"
-          ignore-unfixed: false
-          cache-dir: .trivycache
-          skip-files: "**/google/auth/crypt/__pycache__/**"
-
-      # # Always run this to surface actionable LOW/MEDIUM (fixed only), but never fail
-      # - name: Trivy scan (image) — advisory LOW/MEDIUM (fixed only)
-      #   if: always()
-      #   uses: aquasecurity/trivy-action@0.26.0
-      #   with:
-      #     image-ref: ${{ env.CI_IMAGE }}
-      #     format: table
-      #     exit-code: 0
-      #     severity: LOW,MEDIUM
-      #     vuln-type: 'os,library'
-
-      #     ignore-unfixed: true
-      #     cache-dir: .trivycache
+    uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/python-ci.yaml@main
