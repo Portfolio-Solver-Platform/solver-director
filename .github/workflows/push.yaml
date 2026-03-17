@@ -17,7 +17,7 @@ jobs:
 
     uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/push-image.yaml@main
     with:
-      image_name: solver-controller
+      image_name: solver-director
     #   file_name: 'user.yaml'
     #   infrastructure_bot_id: ${{ vars.INFRASTRUCTURE_BOT_APP_ID }}
     # secrets:
