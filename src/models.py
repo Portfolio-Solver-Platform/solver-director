@@ -142,7 +142,7 @@ class UserResourceConfig(Base):
     __tablename__ = "user_resource_config"
 
     user_id = Column(String, primary_key=True)
-    cpu_cores = Column(Float, nullable=True)    # NULL means use per_user default
+    vcpus = Column(Integer, nullable=True)       # NULL means use per_user default
     memory_gib = Column(Float, nullable=True)   # NULL means use per_user default
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 

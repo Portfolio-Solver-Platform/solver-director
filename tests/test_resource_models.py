@@ -41,30 +41,30 @@ def test_resource_defaults_singleton(test_db):
 def test_user_resource_config_with_explicit_values(test_db):
     config = UserResourceConfig(
         user_id="user-abc",
-        cpu_cores=8.0,
+        vcpus=8,
         memory_gib=16.0,
     )
     test_db.add(config)
     test_db.commit()
 
     row = test_db.query(UserResourceConfig).filter_by(user_id="user-abc").one()
-    assert row.cpu_cores == 8.0
+    assert row.vcpus == 8
     assert row.memory_gib == 16.0
     assert row.updated_at is not None
 
 
 def test_user_resource_config_null_means_use_default(test_db):
-    """NULL cpu_cores/memory_gib signals 'use the global per-user default'."""
+    """NULL vcpus/memory_gib signals 'use the global per-user default'."""
     config = UserResourceConfig(
         user_id="user-xyz",
-        cpu_cores=None,
+        vcpus=None,
         memory_gib=None,
     )
     test_db.add(config)
     test_db.commit()
 
     row = test_db.query(UserResourceConfig).filter_by(user_id="user-xyz").one()
-    assert row.cpu_cores is None
+    assert row.vcpus is None
     assert row.memory_gib is None
 
 
@@ -72,14 +72,14 @@ def test_user_resource_config_partial_override(test_db):
     """Each field can be overridden independently."""
     config = UserResourceConfig(
         user_id="user-partial",
-        cpu_cores=16.0,
+        vcpus=16,
         memory_gib=None,  # memory still uses default
     )
     test_db.add(config)
     test_db.commit()
 
     row = test_db.query(UserResourceConfig).filter_by(user_id="user-partial").one()
-    assert row.cpu_cores == 16.0
+    assert row.vcpus == 16
     assert row.memory_gib is None
 
 

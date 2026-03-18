@@ -178,7 +178,7 @@ def test_get_user_config_requires_auth(client_with_db):
 
 def test_put_user_config_requires_auth(client_with_db):
     response = client_with_db.put(
-        "/v1/resources/users/user-a", json={"cpu_cores": 2.0, "memory_gib": 4.0}
+        "/v1/resources/users/user-a", json={"vcpus": 2, "memory_gib": 4.0}
     )
     assert response.status_code == 401
 
@@ -209,7 +209,7 @@ def test_put_user_config_requires_write_scope(client_with_db, auth):
     token = auth.issue_token(MockToken(scopes=["resources:read"]))
     assert client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 2.0, "memory_gib": 4.0},
+        json={"vcpus": 2, "memory_gib": 4.0},
         headers=auth.auth_header(token),
     ).status_code == 403
 
@@ -254,7 +254,7 @@ def test_get_user_config_returns_null_overrides_when_no_config(client_with_db, a
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["cpu_cores_override"] is None
+    assert data["vcpus_override"] is None
     assert data["memory_gib_override"] is None
     assert data["effective_cpu_cores"] == Config.ResourceLimitDefaults.PER_USER_CPU_CORES
     assert data["effective_memory_gib"] == Config.ResourceLimitDefaults.PER_USER_MEMORY_GIB
@@ -262,7 +262,7 @@ def test_get_user_config_returns_null_overrides_when_no_config(client_with_db, a
 
 def test_get_user_config_returns_override_when_set(client_with_db, auth, test_db):
     test_db.add(ResourceDefaults(id=1, **VALID_DEFAULTS))
-    test_db.add(UserResourceConfig(user_id="user-a", cpu_cores=2.0, memory_gib=6.0))
+    test_db.add(UserResourceConfig(user_id="user-a", vcpus=2, memory_gib=6.0))
     test_db.commit()
 
     user = MockUser(id="user-a")
@@ -273,7 +273,7 @@ def test_get_user_config_returns_override_when_set(client_with_db, auth, test_db
     assert response.status_code == 200
     data = response.json()
     assert data["user_id"] == "user-a"
-    assert data["cpu_cores_override"] == 2.0
+    assert data["vcpus_override"] == 2.0
     assert data["memory_gib_override"] == 6.0
     assert data["effective_cpu_cores"] == 2.0
     assert data["effective_memory_gib"] == 6.0
@@ -400,13 +400,13 @@ def test_put_user_config_creates_override(client_with_db, auth, test_db):
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
     response = client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 2.0, "memory_gib": 4.0},
+        json={"vcpus": 2, "memory_gib": 4.0},
         headers=auth.auth_header(token),
     )
     assert response.status_code == 200
     data = response.json()
     assert data["user_id"] == "user-a"
-    assert data["cpu_cores"] == 2.0
+    assert data["vcpus"] == 2.0
     assert data["memory_gib"] == 4.0
 
     assert test_db.query(UserResourceConfig).filter_by(user_id="user-a").count() == 1
@@ -414,17 +414,17 @@ def test_put_user_config_creates_override(client_with_db, auth, test_db):
 
 def test_put_user_config_updates_existing_override(client_with_db, auth, test_db):
     test_db.add(ResourceDefaults(id=1, **VALID_DEFAULTS))
-    test_db.add(UserResourceConfig(user_id="user-a", cpu_cores=2.0, memory_gib=4.0))
+    test_db.add(UserResourceConfig(user_id="user-a", vcpus=2, memory_gib=4.0))
     test_db.commit()
 
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
     response = client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 3.0, "memory_gib": 6.0},
+        json={"vcpus": 3, "memory_gib": 6.0},
         headers=auth.auth_header(token),
     )
     assert response.status_code == 200
-    assert response.json()["cpu_cores"] == 3.0
+    assert response.json()["vcpus"] == 3.0
     assert response.json()["memory_gib"] == 6.0
 
     assert test_db.query(UserResourceConfig).filter_by(user_id="user-a").count() == 1
@@ -437,11 +437,11 @@ def test_put_user_config_rejects_cpu_exceeding_global_max(client_with_db, auth, 
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
     response = client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 5.0, "memory_gib": 4.0},  # 5.0 > 4.0 global max
+        json={"vcpus": 5, "memory_gib": 4.0},  # 5.0 > 4.0 global max
         headers=auth.auth_header(token),
     )
     assert response.status_code == 422
-    assert "cpu_cores" in response.json()["detail"]
+    assert "vcpus" in response.json()["detail"]
 
 
 def test_put_user_config_rejects_memory_exceeding_global_max(client_with_db, auth, test_db):
@@ -451,7 +451,7 @@ def test_put_user_config_rejects_memory_exceeding_global_max(client_with_db, aut
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
     response = client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 2.0, "memory_gib": 20.0},  # 20.0 > 12.0 global max
+        json={"vcpus": 2, "memory_gib": 20.0},  # 20.0 > 12.0 global max
         headers=auth.auth_header(token),
     )
     assert response.status_code == 422
@@ -466,7 +466,7 @@ def test_put_user_config_equal_to_global_max_is_valid(client_with_db, auth, test
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
     response = client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 4.0, "memory_gib": 12.0},  # exactly at global max
+        json={"vcpus": 4, "memory_gib": 12.0},  # exactly at global max
         headers=auth.auth_header(token),
     )
     assert response.status_code == 200
@@ -481,7 +481,7 @@ def test_put_user_config_uses_config_fallback_when_no_defaults_row(client_with_d
     response = client_with_db.put(
         "/v1/resources/users/user-a",
         json={
-            "cpu_cores": Config.ResourceLimitDefaults.GLOBAL_MAX_CPU_CORES,
+            "vcpus": Config.ResourceLimitDefaults.GLOBAL_MAX_CPU_CORES,
             "memory_gib": Config.ResourceLimitDefaults.GLOBAL_MAX_MEMORY_GIB,
         },
         headers=auth.auth_header(token),
@@ -496,7 +496,7 @@ def test_put_user_config_rejects_zero_values(client_with_db, auth, test_db):
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
     response = client_with_db.put(
         "/v1/resources/users/user-a",
-        json={"cpu_cores": 0.0, "memory_gib": 4.0},
+        json={"vcpus": 0, "memory_gib": 4.0},
         headers=auth.auth_header(token),
     )
     assert response.status_code == 422
@@ -506,7 +506,7 @@ def test_put_user_config_rejects_zero_values(client_with_db, auth, test_db):
 
 
 def test_delete_user_config_removes_override(client_with_db, auth, test_db):
-    test_db.add(UserResourceConfig(user_id="user-a", cpu_cores=2.0, memory_gib=4.0))
+    test_db.add(UserResourceConfig(user_id="user-a", vcpus=2, memory_gib=4.0))
     test_db.commit()
 
     token = auth.issue_token(MockToken(scopes=["resources:write"]))
@@ -528,7 +528,7 @@ def test_delete_user_config_returns_404_when_no_override(client_with_db, auth):
 def test_get_returns_null_overrides_after_delete(client_with_db, auth, test_db):
     """After deleting an override, GET returns null overrides and falls back to defaults."""
     test_db.add(ResourceDefaults(id=1, **VALID_DEFAULTS))
-    test_db.add(UserResourceConfig(user_id="user-a", cpu_cores=2.0, memory_gib=4.0))
+    test_db.add(UserResourceConfig(user_id="user-a", vcpus=2, memory_gib=4.0))
     test_db.commit()
 
     admin_token = auth.issue_token(MockToken(scopes=["resources:write"]))
@@ -540,7 +540,7 @@ def test_get_returns_null_overrides_after_delete(client_with_db, auth, test_db):
         "/v1/resources/users/user-a", headers=auth.auth_header(read_token)
     ).json()
 
-    assert data["cpu_cores_override"] is None
+    assert data["vcpus_override"] is None
     assert data["memory_gib_override"] is None
     assert data["effective_cpu_cores"] == VALID_DEFAULTS["per_user_cpu_cores"]
     assert data["effective_memory_gib"] == VALID_DEFAULTS["per_user_memory_gib"]

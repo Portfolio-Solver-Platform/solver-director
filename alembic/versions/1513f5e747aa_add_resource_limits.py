@@ -32,7 +32,7 @@ def upgrade() -> None:
     )
     op.create_table('user_resource_config',
     sa.Column('user_id', sa.String(), nullable=False),
-    sa.Column('cpu_cores', sa.Float(), nullable=True),
+    sa.Column('vcpus', sa.Integer(), nullable=True),
     sa.Column('memory_gib', sa.Float(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('user_id')

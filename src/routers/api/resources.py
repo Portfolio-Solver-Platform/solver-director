@@ -117,18 +117,18 @@ class UserResourceConfigResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: str
-    cpu_cores: float | None
+    vcpus: int | None
     memory_gib: float | None
 
 
 class UserResourceConfigRequest(BaseModel):
-    cpu_cores: float = Field(..., gt=0)
+    vcpus: int = Field(..., gt=0)
     memory_gib: float = Field(..., gt=0)
 
 
 class UserResourceUsageResponse(BaseModel):
     user_id: str
-    cpu_cores_override: float | None
+    vcpus_override: int | None
     memory_gib_override: float | None
     effective_cpu_cores: float
     effective_memory_gib: float
@@ -142,7 +142,7 @@ def _get_user_usage(user_id: str, db: Session) -> UserResourceUsageResponse:
     """Compute effective limits and in-use resources for a user."""
     defaults = _get_defaults(db)
     user_config = db.query(UserResourceConfig).filter_by(user_id=user_id).first()
-    cpu_override = user_config.cpu_cores if user_config else None
+    cpu_override = user_config.vcpus if user_config else None
     mem_override = user_config.memory_gib if user_config else None
     effective_cpu = cpu_override if cpu_override is not None else defaults.per_user_cpu_cores
     effective_mem = mem_override if mem_override is not None else defaults.per_user_memory_gib
@@ -164,7 +164,7 @@ def _get_user_usage(user_id: str, db: Session) -> UserResourceUsageResponse:
 
     return UserResourceUsageResponse(
         user_id=user_id,
-        cpu_cores_override=cpu_override,
+        vcpus_override=cpu_override,
         memory_gib_override=mem_override,
         effective_cpu_cores=effective_cpu,
         effective_memory_gib=effective_mem,
@@ -215,10 +215,10 @@ def update_user_resource_config(
     """
     defaults = _get_defaults(db)
 
-    if request.cpu_cores > defaults.global_max_cpu_cores:
+    if request.vcpus > defaults.global_max_cpu_cores:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=f"cpu_cores exceeds global_max_cpu_cores ({defaults.global_max_cpu_cores})",
+            detail=f"vcpus exceeds global_max_cpu_cores ({defaults.global_max_cpu_cores})",
         )
     if request.memory_gib > defaults.global_max_memory_gib:
         raise HTTPException(
@@ -230,12 +230,12 @@ def update_user_resource_config(
     if config is None:
         config = UserResourceConfig(
             user_id=user_id,
-            cpu_cores=request.cpu_cores,
+            vcpus=request.vcpus,
             memory_gib=request.memory_gib,
         )
         db.add(config)
     else:
-        config.cpu_cores = request.cpu_cores
+        config.vcpus = request.vcpus
         config.memory_gib = request.memory_gib
 
     db.commit()

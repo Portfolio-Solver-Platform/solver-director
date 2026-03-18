@@ -9,7 +9,7 @@ from src.models import ResourceDefaults, Project as ProjectModel
 VALID_CONFIG = {
     "name": "Test Project",
     "timeout": 3600,
-    "cpu_cores": 2.0,
+    "vcpus": 2,
     "memory_gib": 4.0,
     "problem_groups": [
         {
@@ -26,7 +26,7 @@ VALID_CONFIG = {
 VALID_CONFIG_MULTI_GROUP = {
     "name": "Multi-Group Project",
     "timeout": 7200,
-    "cpu_cores": 2.0,
+    "vcpus": 2,
     "memory_gib": 4.0,
     "problem_groups": [
         {
@@ -677,7 +677,7 @@ def test_get_projects_returns_only_user_projects(client_with_db, auth):
 # ── Quota / queue tests ───────────────────────────────────────────────────────
 
 # Defaults used across quota tests: per_user_cpu=3.0, global_max_cpu=6.0,
-# per_user_mem=8.0, global_max_mem=16.0.  VALID_CONFIG requests cpu=2.0, mem=4.0.
+# per_user_mem=8.0, global_max_mem=16.0.  VALID_CONFIG requests vcpus=2, mem=4.0.
 QUOTA_DEFAULTS = {
     "per_user_cpu_cores": 3.0,
     "per_user_memory_gib": 8.0,
