@@ -2,7 +2,6 @@
 
 import asyncio
 import io
-import pytest
 from unittest.mock import Mock, patch
 from src.models import Solver, SolverImage
 

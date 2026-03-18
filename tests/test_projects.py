@@ -3,7 +3,7 @@
 import uuid
 from unittest.mock import patch, MagicMock
 from psp_auth.testing import MockToken, MockUser
-from src.models import ResourceDefaults, UserResourceConfig, Project as ProjectModel
+from src.models import ResourceDefaults, Project as ProjectModel
 
 # Test data
 VALID_CONFIG = {

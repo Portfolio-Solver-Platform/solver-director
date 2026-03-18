@@ -1,6 +1,5 @@
 """Tests that all newly-protected endpoints enforce authentication and scope checks."""
 
-import pytest
 from psp_auth.testing import MockToken
 
 

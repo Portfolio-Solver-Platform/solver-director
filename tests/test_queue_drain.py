@@ -1,8 +1,8 @@
 """Unit tests for the queue drain function."""
 
 import uuid
-from unittest.mock import patch, call
-from src.models import Project, ResourceDefaults, UserResourceConfig
+from unittest.mock import patch
+from src.models import Project, ResourceDefaults
 from src.spawner.queue_drain import drain_queue
 
 # Defaults used across tests: per_user_cpu=3.0, global_max_cpu=6.0,
