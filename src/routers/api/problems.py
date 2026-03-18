@@ -7,8 +7,13 @@ from datetime import datetime
 
 from src.database import get_db
 from src.models import Problem, Group
+from src.auth import auth
 
 router = APIRouter()
+SCOPES = {
+    "read": "problems:read",
+    "write": "problems:write",
+}
 
 
 class ProblemCreateRequest(BaseModel):
@@ -75,8 +80,16 @@ class ProblemResponse(BaseModel):
         return [group.id for group in groups]
 
 
+scopes = [SCOPES["write"]]
+
+
 @router.post(
-    "/problems", response_model=ProblemResponse, status_code=status.HTTP_201_CREATED
+    "/problems",
+    response_model=ProblemResponse,
+    status_code=status.HTTP_201_CREATED,
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
 )
 def create_problem(
     request: ProblemCreateRequest,
@@ -133,7 +146,15 @@ def create_problem(
     return problem
 
 
-@router.get("/problems", response_model=list[ProblemResponse])
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/problems",
+    response_model=list[ProblemResponse],
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def get_problems(db: Annotated[Session, Depends(get_db)], group_id: int | None = None):
     """Get all problems, optionally filtered by group_id"""
     query = db.query(Problem)
@@ -152,7 +173,15 @@ def get_problems(db: Annotated[Session, Depends(get_db)], group_id: int | None =
     return query.all()
 
 
-@router.get("/problems/{problem_id}", response_model=ProblemResponse)
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/problems/{problem_id}",
+    response_model=ProblemResponse,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def get_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     """Get problem metadata"""
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
@@ -163,7 +192,15 @@ def get_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     return problem
 
 
-@router.patch("/problems/{problem_id}", response_model=ProblemResponse)
+scopes = [SCOPES["write"]]
+
+
+@router.patch(
+    "/problems/{problem_id}",
+    response_model=ProblemResponse,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def update_problem(
     problem_id: int,
     request: ProblemUpdateRequest,
@@ -227,7 +264,15 @@ def update_problem(
     return problem
 
 
-@router.get("/problems/{problem_id}/file")
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/problems/{problem_id}/file",
+    # TODO: re-enable auth once solver pods have a service account token
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
+)
 def download_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     """Download problem file"""
     problem = db.query(Problem).filter(Problem.id == problem_id).first()
@@ -249,7 +294,16 @@ def download_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     )
 
 
-@router.put("/problems/{problem_id}/file", response_model=ProblemResponse)
+scopes = [SCOPES["write"]]
+
+
+@router.put(
+    "/problems/{problem_id}/file",
+    response_model=ProblemResponse,
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
+)
 async def upload_problem_file(
     problem_id: int,
     file: Annotated[UploadFile, File(description="Problem file")],
@@ -285,7 +339,15 @@ async def upload_problem_file(
     return problem
 
 
-@router.delete("/problems/{id}", status_code=status.HTTP_204_NO_CONTENT)
+scopes = [SCOPES["write"]]
+
+
+@router.delete(
+    "/problems/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def delete_problem(id: int, db: Annotated[Session, Depends(get_db)]):
     """Delete a problem and all its instances"""
     # Verify problem exists

@@ -41,3 +41,5 @@ class ProjectConfiguration(BaseModel):
     problem_groups: list[ProblemGroupConfig] = Field(
         ..., description="List of problem group configurations", min_length=1
     )
+    vcpus: int = Field(..., description="Number of vCPUs requested for this project", gt=0)
+    memory_gib: float = Field(..., description="Memory requested for this project in GiB", gt=0)

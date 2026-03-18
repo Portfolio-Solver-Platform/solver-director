@@ -1,12 +1,16 @@
 """Tests for projects API endpoints"""
 
+import uuid
 from unittest.mock import patch, MagicMock
 from psp_auth.testing import MockToken, MockUser
+from src.models import ResourceDefaults, Project as ProjectModel
 
 # Test data
 VALID_CONFIG = {
     "name": "Test Project",
     "timeout": 3600,
+    "vcpus": 2,
+    "memory_gib": 4.0,
     "problem_groups": [
         {
             "problem_group": 1,
@@ -22,6 +26,8 @@ VALID_CONFIG = {
 VALID_CONFIG_MULTI_GROUP = {
     "name": "Multi-Group Project",
     "timeout": 7200,
+    "vcpus": 2,
+    "memory_gib": 4.0,
     "problem_groups": [
         {
             "problem_group": 1,
@@ -666,3 +672,219 @@ def test_get_projects_returns_only_user_projects(client_with_db, auth):
     project_ids_b = {p["id"] for p in projects_b}
     assert project_ids_b == {project_b1_id, project_b2_id}
     assert all(p["user_id"] == user_b.id for p in projects_b)
+
+
+# ── Quota / queue tests ───────────────────────────────────────────────────────
+
+# Defaults used across quota tests: per_user_cpu=3.0, global_max_cpu=6.0,
+# per_user_mem=8.0, global_max_mem=16.0.  VALID_CONFIG requests vcpus=2, mem=4.0.
+QUOTA_DEFAULTS = {
+    "per_user_cpu_cores": 3.0,
+    "per_user_memory_gib": 8.0,
+    "global_max_cpu_cores": 6.0,
+    "global_max_memory_gib": 16.0,
+}
+
+
+def test_project_response_includes_is_queued(client_with_db, auth, test_db):
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    with patch("src.routers.api.projects.start_project_services"):
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert "is_queued" in response.json()
+
+
+def test_project_starts_when_resources_available(client_with_db, auth, test_db):
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is False
+    mock_start.assert_called_once()
+
+
+def test_project_queued_when_queue_non_empty(client_with_db, auth, test_db):
+    """A new project joins the queue even if resources are available."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))
+    test_db.add(ProjectModel(
+        id=uuid.uuid4(),
+        user_id="other-user",
+        name="existing-queued",
+        configuration={},
+        requested_cpu_cores=0.5,
+        requested_memory_gib=1.0,
+        is_queued=True,
+    ))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is True
+    mock_start.assert_not_called()
+
+
+def test_project_queued_when_global_cpu_exceeded(client_with_db, auth, test_db):
+    """Project is queued when adding it would exceed the global CPU cap."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # global_max_cpu=6.0
+    # Seed 5.0 cores in use globally (different user so per-user is fine)
+    test_db.add(ProjectModel(
+        id=uuid.uuid4(),
+        user_id="other-user",
+        name="active",
+        configuration={},
+        requested_cpu_cores=5.0,
+        requested_memory_gib=1.0,
+    ))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        # VALID_CONFIG requests 2.0 cores: 5.0 + 2.0 = 7.0 > 6.0 global max
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is True
+    mock_start.assert_not_called()
+
+
+def test_project_queued_when_global_memory_exceeded(client_with_db, auth, test_db):
+    """Project is queued when adding it would exceed the global memory cap."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # global_max_mem=16.0
+    test_db.add(ProjectModel(
+        id=uuid.uuid4(),
+        user_id="other-user",
+        name="active",
+        configuration={},
+        requested_cpu_cores=1.0,
+        requested_memory_gib=13.0,
+    ))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        # VALID_CONFIG requests 4.0 GiB: 13.0 + 4.0 = 17.0 > 16.0 global max
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is True
+    mock_start.assert_not_called()
+
+
+def test_project_queued_when_per_user_cpu_exceeded(client_with_db, auth, test_db):
+    """Project is queued when the user would exceed their per-user CPU limit."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # per_user_cpu=3.0
+    user = MockUser(id="user-a")
+    test_db.add(ProjectModel(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        name="active",
+        configuration={},
+        requested_cpu_cores=2.0,
+        requested_memory_gib=1.0,
+    ))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"], user=user))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        # user already uses 2.0; VALID_CONFIG adds 2.0 → 4.0 > 3.0 per-user limit
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is True
+    mock_start.assert_not_called()
+
+
+def test_project_queued_when_per_user_memory_exceeded(client_with_db, auth, test_db):
+    """Project is queued when the user would exceed their per-user memory limit."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # per_user_mem=8.0
+    user = MockUser(id="user-a")
+    test_db.add(ProjectModel(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        name="active",
+        configuration={},
+        requested_cpu_cores=0.5,
+        requested_memory_gib=5.0,
+    ))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"], user=user))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        # user already uses 5.0 GiB; VALID_CONFIG adds 4.0 → 9.0 > 8.0 per-user limit
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is True
+    mock_start.assert_not_called()
+
+
+def test_delete_project_triggers_queue_drain(client_with_db, auth, test_db):
+    """Deleting an active project should drain the queue and start the next project."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))
+    test_db.commit()
+
+    user = MockUser(id="user-a")
+    token = auth.issue_token(MockToken(scopes=["projects:write"], user=user))
+
+    with patch("src.routers.api.projects.start_project_services"):
+        r1 = client_with_db.post("/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token))
+        assert r1.json()["is_queued"] is False
+
+        # 2nd project is queued (per-user cap: 2+2=4 > 3)
+        r2 = client_with_db.post("/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token))
+        assert r2.json()["is_queued"] is True
+
+    project1_id = r1.json()["id"]
+    project2_id = r2.json()["id"]
+
+    # Deleting project 1 frees 2 cores; the drain should start project 2
+    with patch("src.routers.api.projects.stop_solver_controller"):
+        with patch("src.spawner.queue_drain.start_project_services") as mock_drain_start:
+            client_with_db.delete(f"/v1/projects/{project1_id}", headers=auth.auth_header(token))
+
+    mock_drain_start.assert_called_once()
+    p2 = test_db.query(ProjectModel).filter_by(id=uuid.UUID(project2_id)).first()
+    assert p2.is_queued is False
+
+
+def test_project_starts_despite_other_user_at_per_user_cap(client_with_db, auth, test_db):
+    """User B can start a project even when user A is at their per-user cap."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # per_user_cpu=3.0
+    # User A is at their limit
+    test_db.add(ProjectModel(
+        id=uuid.uuid4(),
+        user_id="user-a",
+        name="user-a-active",
+        configuration={},
+        requested_cpu_cores=3.0,
+        requested_memory_gib=4.0,
+    ))
+    test_db.commit()
+
+    user_b = MockUser(id="user-b")
+    token = auth.issue_token(MockToken(scopes=["projects:write"], user=user_b))
+    with patch("src.routers.api.projects.start_project_services") as mock_start:
+        response = client_with_db.post(
+            "/v1/projects", json=VALID_CONFIG, headers=auth.auth_header(token)
+        )
+    assert response.status_code == 201
+    assert response.json()["is_queued"] is False
+    mock_start.assert_called_once()

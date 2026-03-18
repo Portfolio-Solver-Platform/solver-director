@@ -1,6 +1,7 @@
 from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Depends, status
 from src.project_utils.data_streamer import data_streamer
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
@@ -10,9 +11,10 @@ from prometheus_client import Counter
 import logging
 
 from src.database import get_db
-from src.models import Project
+from src.models import Project, ResourceDefaults, UserResourceConfig
 from src.spawner.start_service import start_project_services
 from src.spawner.stop_service import stop_solver_controller
+from src.spawner.queue_drain import drain_queue
 from src.config import Config
 from src.schemas import ProjectConfiguration
 from src.auth import auth
@@ -43,6 +45,73 @@ class ProjectResponse(BaseModel):
     user_id: str
     name: str
     created_at: datetime
+    is_queued: bool
+
+
+def _should_queue(user_id: str, cpu_requested: float, mem_requested: float, db: Session) -> bool:
+    """Return True if this project should join the queue instead of starting immediately.
+
+    Rule 1: if any project is already queued, join the queue (prevents starvation of
+    large requests that would otherwise be bypassed by smaller ones indefinitely).
+
+    Rule 2: if adding this project would exceed the global hard cap, queue it.
+
+    Rule 3: if the user's effective per-user limit would be exceeded, queue it.
+    """
+    # Rule 1: non-empty queue → always join
+    if db.query(Project).filter_by(is_queued=True).first() is not None:
+        return True
+
+    # Resolve limits
+    defaults_row = db.query(ResourceDefaults).filter_by(id=1).first()
+    if defaults_row is None:
+        global_max_cpu = Config.ResourceLimitDefaults.GLOBAL_MAX_CPU_CORES
+        global_max_mem = Config.ResourceLimitDefaults.GLOBAL_MAX_MEMORY_GIB
+        per_user_cpu = Config.ResourceLimitDefaults.PER_USER_CPU_CORES
+        per_user_mem = Config.ResourceLimitDefaults.PER_USER_MEMORY_GIB
+    else:
+        global_max_cpu = defaults_row.global_max_cpu_cores
+        global_max_mem = defaults_row.global_max_memory_gib
+        per_user_cpu = defaults_row.per_user_cpu_cores
+        per_user_mem = defaults_row.per_user_memory_gib
+
+    user_config = db.query(UserResourceConfig).filter_by(user_id=user_id).first()
+    effective_cpu = user_config.vcpus if user_config and user_config.vcpus is not None else per_user_cpu
+    effective_mem = user_config.memory_gib if user_config and user_config.memory_gib is not None else per_user_mem
+
+    # Rule 2: global capacity check
+    global_row = (
+        db.query(
+            func.coalesce(func.sum(Project.requested_cpu_cores), 0.0).label("cpu"),
+            func.coalesce(func.sum(Project.requested_memory_gib), 0.0).label("memory"),
+        )
+        .filter(Project.is_complete == False, Project.is_queued == False)  # noqa: E712
+        .one()
+    )
+    if float(global_row.cpu) + cpu_requested > global_max_cpu:
+        return True
+    if float(global_row.memory) + mem_requested > global_max_mem:
+        return True
+
+    # Rule 3: per-user capacity check
+    user_row = (
+        db.query(
+            func.coalesce(func.sum(Project.requested_cpu_cores), 0.0).label("cpu"),
+            func.coalesce(func.sum(Project.requested_memory_gib), 0.0).label("memory"),
+        )
+        .filter(
+            Project.user_id == user_id,
+            Project.is_complete == False,  # noqa: E712
+            Project.is_queued == False,    # noqa: E712
+        )
+        .one()
+    )
+    if float(user_row.cpu) + cpu_requested > effective_cpu:
+        return True
+    if float(user_row.memory) + mem_requested > effective_mem:
+        return True
+
+    return False
 
 
 class ProjectWithStatusResponse(ProjectResponse):
@@ -64,12 +133,18 @@ def create_project(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(auth.user())],
 ):
-    """Create a new project and start a solver controller"""
+    """Create a new project. Starts immediately if resources are available and the
+    queue is empty, otherwise joins the FIFO queue.
+    """
+    queued = _should_queue(user.id, config.vcpus, config.memory_gib, db)
 
     project = Project(
         user_id=user.id,
         name=config.name,
         configuration=config.model_dump(),
+        requested_cpu_cores=config.vcpus,
+        requested_memory_gib=config.memory_gib,
+        is_queued=queued,
     )
 
     db.add(project)
@@ -83,17 +158,18 @@ def create_project(
             detail="Unable to create project",
         )
 
-    try:
-        start_project_services(config, str(project.id), user.id)
-    except Exception as e:
-        db.rollback()
-        logger.error(
-            f"Failed to start services for project {project.id}, user {user.id}: {e}"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to create project",
-        )
+    if not queued:
+        try:
+            start_project_services(config, str(project.id), user.id)
+        except Exception as e:
+            db.rollback()
+            logger.error(
+                f"Failed to start services for project {project.id}, user {user.id}: {e}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Unable to create project",
+            )
 
     try:
         db.commit()
@@ -159,6 +235,18 @@ def get_project_status(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invalid user or project"
         )
 
+    # If project is already complete, return immediately without contacting
+    # the solver-controller (which has already been torn down)
+    if project.is_complete:
+        return ProjectWithStatusResponse(
+            id=project.id,
+            user_id=project.user_id,
+            name=project.name,
+            created_at=project.created_at,
+            is_queued=project.is_queued,
+            status={"isFinished": True},
+        )
+
     # Build URL to solver controller's status endpoint
     url = f"http://{Config.SolverController.SVC_NAME}.{str(project.id)}.svc.cluster.local:{Config.SolverController.SERVICE_PORT}/v1/status?queue_name={str(project.id)}"
 
@@ -180,6 +268,7 @@ def get_project_status(
         user_id=project.user_id,
         name=project.name,
         created_at=project.created_at,
+        is_queued=project.is_queued,
         status=status_data,
     )
 
@@ -294,4 +383,10 @@ def delete_project(
 
     db.delete(project)
     db.commit()
+
+    try:
+        drain_queue(db)
+    except Exception as e:
+        logger.error(f"Queue drain failed after project {project_id} deletion: {e}")
+
     return None

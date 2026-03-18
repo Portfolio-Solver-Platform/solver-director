@@ -14,9 +14,14 @@ from prometheus_client import Counter
 from src.database import get_db
 from src.models import Solver, SolverImage
 from src.config import Config
+from src.auth import auth
 
 
 router = APIRouter()
+SCOPES = {
+    "read": "solvers:read",
+    "write": "solvers:write",
+}
 
 # Docker image name validation pattern
 # Must start with lowercase letter or digit, followed by lowercase alphanumeric, dots, hyphens, or underscores
@@ -123,7 +128,16 @@ class SolverUploadResponse(BaseModel):
     image_path: str
 
 
-@router.get("/solvers", response_model=SolversResponse, summary="Get all solvers")
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/solvers",
+    response_model=SolversResponse,
+    summary="Get all solvers",
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def get_solvers(db: Annotated[Session, Depends(get_db)]):
     """Get list of all solvers with their IDs from database"""
     solvers = db.query(Solver).join(Solver.solver_image).all()
@@ -131,8 +145,16 @@ def get_solvers(db: Annotated[Session, Depends(get_db)]):
     return SolversResponse(solvers=solver_items)
 
 
+scopes = [SCOPES["read"]]
+
+
 @router.get(
-    "/solvers/{id}", response_model=SolverDetailResponse, summary="Get solver by ID"
+    "/solvers/{id}",
+    response_model=SolverDetailResponse,
+    summary="Get solver by ID",
+    # TODO: re-enable auth once solver-controller has a service account token
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
 )
 def get_solver_by_id(id: int, db: Annotated[Session, Depends(get_db)]):
     """Get solver details by ID"""
@@ -145,8 +167,16 @@ def get_solver_by_id(id: int, db: Annotated[Session, Depends(get_db)]):
     return SolverDetailResponse.from_solver_with_image(solver)
 
 
+scopes = [SCOPES["write"]]
+
+
 @router.post(
-    "/solvers", response_model=SolverUploadResponse, status_code=status.HTTP_201_CREATED
+    "/solvers",
+    response_model=SolverUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
 )
 async def upload_solver(
     image_name: Annotated[

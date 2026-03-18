@@ -136,10 +136,10 @@ def start_project_services(project_config, id, user_id):
         "metadata": {"name": "solver-quota", "namespace": _solvers_namespace},
         "spec": {
             "hard": {
-                "requests.cpu": str(int(Config.SolversNamespace.CPU_QUOTA)),
-                "requests.memory": f"{int(Config.SolversNamespace.MEMORY_QUOTA)}Gi",
-                "limits.cpu": str(int(Config.SolversNamespace.CPU_QUOTA)),
-                "limits.memory": f"{int(Config.SolversNamespace.MEMORY_QUOTA)}Gi",
+                "requests.cpu": str(int(project_config.vcpus)),
+                "requests.memory": f"{int(project_config.memory_gib)}Gi",
+                "limits.cpu": str(int(project_config.vcpus)),
+                "limits.memory": f"{int(project_config.memory_gib)}Gi",
             }
         },
     }
@@ -160,7 +160,7 @@ def start_project_services(project_config, id, user_id):
 
     _ = kube_client.create_namespaced_pod(
         namespace=id,
-        body=create_solver_controller_pod_manifest(id, control_queue, result_queue, project_config.timeout),
+        body=create_solver_controller_pod_manifest(id, control_queue, result_queue, project_config.timeout, int(project_config.vcpus)),
     )
     _ = kube_client.create_namespaced_service(
         namespace=id,
@@ -208,10 +208,8 @@ def start_project_services(project_config, id, user_id):
         connection.close()
 
 
-def create_solver_controller_pod_manifest(project_id, control_queue, result_queue, timeout):
+def create_solver_controller_pod_manifest(project_id, control_queue, result_queue, timeout, max_replicas):
     _solvers_namespace = solvers_namespace(project_id)
-
-    max_replicas = Config.SolversNamespace.CPU_QUOTA
 
     return {
         "apiVersion": "v1",

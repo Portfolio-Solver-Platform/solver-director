@@ -107,3 +107,9 @@ postgres:
     claimName: "postgres-data"
     size: "1Gi"
     storageClass: "postgres-retain"
+
+resourceLimitDefaults:
+  perUserCpuCores: "8"
+  perUserMemoryGib: "32"
+  globalMaxCpuCores: "16"
+  globalMaxMemoryGib: "64"
