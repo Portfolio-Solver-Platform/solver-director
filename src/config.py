@@ -53,11 +53,11 @@ class Config:
         PASSWORD = os.getenv("RABBITMQ_PASSWORD", "guest")
         SOLVER_DIRECTOR_RESULT_QUEUE = "solver_director_result_queue"
 
-    class SolversNamespace:
-        CPU_QUOTA = float(os.getenv("SOLVERS_NAMESPACE_CPU_QUOTA", "5"))  # In cores
-        MEMORY_QUOTA = float(
-            os.getenv("SOLVERS_NAMESPACE_MEMORY_QUOTA", "16")
-        )  # In GiB
+    class ResourceLimitDefaults:
+        PER_USER_CPU_CORES = float(os.getenv("DEFAULT_PER_USER_CPU_CORES", "3.0"))
+        PER_USER_MEMORY_GIB = float(os.getenv("DEFAULT_PER_USER_MEMORY_GIB", "8.0"))
+        GLOBAL_MAX_CPU_CORES = float(os.getenv("DEFAULT_GLOBAL_MAX_CPU_CORES", "4.0"))
+        GLOBAL_MAX_MEMORY_GIB = float(os.getenv("DEFAULT_GLOBAL_MAX_MEMORY_GIB", "12.0"))
 
     class Keda:
         KEDA_QUEUE_LENGTH = os.getenv("KEDA_QUEUE_LENGTH", "1")

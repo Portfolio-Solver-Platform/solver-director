@@ -2,6 +2,7 @@ import json
 import logging
 import aio_pika
 from src.spawner.stop_service import stop_solver_controller
+from src.spawner.queue_drain import drain_queue
 from src.utils import solver_director_result_queue_name
 from src.database import SessionLocal
 from src.config import Config
@@ -36,7 +37,8 @@ async def result_collector():
                         logger.info("Received result message")
                         result_data = message.body.decode()
                         result_json = json.loads(result_data)
-                        if result_json.get("final_message", False):
+                        is_final = result_json.get("final_message", False)
+                        if is_final:
                             try:
                                 stop_solver_controller(result_json["project_id"])
                             except Exception as cleanup_error:
@@ -55,6 +57,12 @@ async def result_collector():
 
                         db.add(result)
                         db.commit()
+
+                        if is_final:
+                            try:
+                                drain_queue(db)
+                            except Exception as e:
+                                logger.error(f"Queue drain failed after project completion: {e}")
                     except Exception as e:
                         db.rollback()
                         # Check if this is a foreign key violation for a deleted project

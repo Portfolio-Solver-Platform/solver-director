@@ -1,6 +1,7 @@
 from sqlalchemy import (
     BigInteger,
     Column,
+    Float,
     Integer,
     String,
     ForeignKey,
@@ -126,6 +127,26 @@ class Instance(Base):
     # problem, if group deleted, then all problems are also deleted
 
 
+class ResourceDefaults(Base):
+    __tablename__ = "resource_defaults"
+
+    id = Column(Integer, primary_key=True)  # always 1 — singleton row
+    per_user_cpu_cores = Column(Float, nullable=False)
+    per_user_memory_gib = Column(Float, nullable=False)
+    global_max_cpu_cores = Column(Float, nullable=False)
+    global_max_memory_gib = Column(Float, nullable=False)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class UserResourceConfig(Base):
+    __tablename__ = "user_resource_config"
+
+    user_id = Column(String, primary_key=True)
+    cpu_cores = Column(Float, nullable=True)    # NULL means use per_user default
+    memory_gib = Column(Float, nullable=True)   # NULL means use per_user default
+    updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -135,6 +156,9 @@ class Project(Base):
     configuration = Column(JSON().with_variant(JSONB(), "postgresql"), nullable=False)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     is_complete = Column(Boolean, nullable=False, default=False, server_default="false")
+    requested_cpu_cores = Column(Float, nullable=False)
+    requested_memory_gib = Column(Float, nullable=False)
+    is_queued = Column(Boolean, nullable=False, default=False, server_default="false")
 
 
 class ProjectResult(Base):

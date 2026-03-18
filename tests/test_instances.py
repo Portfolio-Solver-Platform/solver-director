@@ -3,16 +3,16 @@
 from io import BytesIO
 
 
-def test_upload_instance(client_with_db):
+def test_upload_instance(authed_client_with_db):
     """Test uploading an instance file"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
@@ -20,7 +20,7 @@ def test_upload_instance(client_with_db):
 
     # Upload instance
     file_content = b"This is a test instance file"
-    response = client_with_db.post(
+    response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("instance.dzn", BytesIO(file_content), "text/plain")},
     )
@@ -35,9 +35,9 @@ def test_upload_instance(client_with_db):
     assert "uploaded_at" in data
 
 
-def test_upload_instance_to_nonexistent_problem(client_with_db):
+def test_upload_instance_to_nonexistent_problem(authed_client_with_db):
     """Test uploading instance to non-existent problem returns 404"""
-    response = client_with_db.post(
+    response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems/99999/instances",
         files={"file": ("instance.dzn", BytesIO(b"content"), "text/plain")},
     )
@@ -45,23 +45,23 @@ def test_upload_instance_to_nonexistent_problem(client_with_db):
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_upload_instance_empty_file(client_with_db):
+def test_upload_instance_empty_file(authed_client_with_db):
     """Test uploading empty instance file fails"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Try to upload empty file
-    response = client_with_db.post(
+    response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("empty.dzn", BytesIO(b""), "text/plain")},
     )
@@ -69,55 +69,55 @@ def test_upload_instance_empty_file(client_with_db):
     assert "empty" in response.json()["detail"].lower()
 
 
-def test_upload_instance_missing_file(client_with_db):
+def test_upload_instance_missing_file(authed_client_with_db):
     """Test uploading instance without file fails"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Try to upload without file
-    response = client_with_db.post(
+    response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances"
     )
     assert response.status_code == 422
 
 
-def test_get_instances_for_problem(client_with_db):
+def test_get_instances_for_problem(authed_client_with_db):
     """Test getting all instances for a specific problem"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Upload two instances
-    client_with_db.post(
+    authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("instance1.dzn", BytesIO(b"content1"), "text/plain")},
     )
-    client_with_db.post(
+    authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("instance2.dzn", BytesIO(b"content2"), "text/plain")},
     )
 
     # Get all instances for problem
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances"
     )
     assert response.status_code == 200
@@ -129,23 +129,23 @@ def test_get_instances_for_problem(client_with_db):
     assert data[1]["problem_id"] == problem_id
 
 
-def test_get_instances_empty_problem(client_with_db):
+def test_get_instances_empty_problem(authed_client_with_db):
     """Test getting instances for problem with no instances returns empty list"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Get instances - should be empty
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances"
     )
     assert response.status_code == 200
@@ -153,47 +153,47 @@ def test_get_instances_empty_problem(client_with_db):
     assert len(data) == 0
 
 
-def test_get_instances_nonexistent_problem(client_with_db):
+def test_get_instances_nonexistent_problem(authed_client_with_db):
     """Test getting instances for non-existent problem returns 404"""
-    response = client_with_db.get("/api/solverdirector/v1/problems/99999/instances")
+    response = authed_client_with_db.get("/api/solverdirector/v1/problems/99999/instances")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_get_instances_multiple_problems(client_with_db):
+def test_get_instances_multiple_problems(authed_client_with_db):
     """Test that instances are correctly filtered by problem"""
     # Create group
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Create two problems
-    problem1_response = client_with_db.post(
+    problem1_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 1", "group_ids": [group_id]},
     )
     problem1_id = problem1_response.json()["id"]
 
-    problem2_response = client_with_db.post(
+    problem2_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 2", "group_ids": [group_id]},
     )
     problem2_id = problem2_response.json()["id"]
 
     # Add instances to both problems
-    client_with_db.post(
+    authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem1_id}/instances",
         files={"file": ("p1_instance.dzn", BytesIO(b"content1"), "text/plain")},
     )
-    client_with_db.post(
+    authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem2_id}/instances",
         files={"file": ("p2_instance.dzn", BytesIO(b"content2"), "text/plain")},
     )
 
     # Get instances for problem1 - should only have 1
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem1_id}/instances"
     )
     assert response.status_code == 200
@@ -203,30 +203,30 @@ def test_get_instances_multiple_problems(client_with_db):
     assert data[0]["problem_id"] == problem1_id
 
 
-def test_get_instance_metadata(client_with_db):
+def test_get_instance_metadata(authed_client_with_db):
     """Test getting instance metadata without file content"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Upload instance
-    upload_response = client_with_db.post(
+    upload_response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("test.dzn", BytesIO(b"test content"), "text/plain")},
     )
     instance_id = upload_response.json()["id"]
 
     # Get metadata
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/{instance_id}"
     )
     assert response.status_code == 200
@@ -237,74 +237,74 @@ def test_get_instance_metadata(client_with_db):
     assert "file_data" not in data  # Should not include binary data
 
 
-def test_get_nonexistent_instance(client_with_db):
+def test_get_nonexistent_instance(authed_client_with_db):
     """Test getting non-existent instance returns 404"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Try to get non-existent instance
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/99999"
     )
     assert response.status_code == 404
 
 
-def test_get_instance_wrong_problem(client_with_db):
+def test_get_instance_wrong_problem(authed_client_with_db):
     """Test getting instance from wrong problem returns 404"""
     # Create group
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Create two problems
-    problem1_response = client_with_db.post(
+    problem1_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 1", "group_ids": [group_id]},
     )
     problem1_id = problem1_response.json()["id"]
 
-    problem2_response = client_with_db.post(
+    problem2_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 2", "group_ids": [group_id]},
     )
     problem2_id = problem2_response.json()["id"]
 
     # Upload instance to problem 1
-    upload_response = client_with_db.post(
+    upload_response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem1_id}/instances",
         files={"file": ("instance.dzn", BytesIO(b"content"), "text/plain")},
     )
     instance_id = upload_response.json()["id"]
 
     # Try to get instance from problem 2 - should fail
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem2_id}/instances/{instance_id}"
     )
     assert response.status_code == 404
 
 
-def test_download_instance_file(client_with_db):
+def test_download_instance_file(authed_client_with_db):
     """Test downloading instance file"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
@@ -312,14 +312,14 @@ def test_download_instance_file(client_with_db):
 
     # Upload instance
     file_content = b"This is the actual instance content"
-    upload_response = client_with_db.post(
+    upload_response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("download.dzn", BytesIO(file_content), "text/plain")},
     )
     instance_id = upload_response.json()["id"]
 
     # Download file
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/{instance_id}/file"
     )
     assert response.status_code == 200
@@ -330,75 +330,75 @@ def test_download_instance_file(client_with_db):
     )
 
 
-def test_download_nonexistent_instance(client_with_db):
+def test_download_nonexistent_instance(authed_client_with_db):
     """Test downloading non-existent instance returns 404"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Try to download non-existent instance
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/99999/file"
     )
     assert response.status_code == 404
 
 
-def test_download_instance_wrong_problem(client_with_db):
+def test_download_instance_wrong_problem(authed_client_with_db):
     """Test downloading instance from wrong problem returns 404"""
     # Create group
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Create two problems
-    problem1_response = client_with_db.post(
+    problem1_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 1", "group_ids": [group_id]},
     )
     problem1_id = problem1_response.json()["id"]
 
-    problem2_response = client_with_db.post(
+    problem2_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 2", "group_ids": [group_id]},
     )
     problem2_id = problem2_response.json()["id"]
 
     # Upload instance to problem 1
-    upload_response = client_with_db.post(
+    upload_response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem1_id}/instances",
         files={"file": ("instance.dzn", BytesIO(b"content"), "text/plain")},
     )
     instance_id = upload_response.json()["id"]
 
     # Try to download instance from problem 2 - should fail
-    response = client_with_db.get(
+    response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem2_id}/instances/{instance_id}/file"
     )
     assert response.status_code == 404
 
 
 # DELETE /problems/{problem_id}/instances/{instance_id} tests
-def test_delete_instance_success(client_with_db):
+def test_delete_instance_success(authed_client_with_db):
     """Test successfully deleting an instance"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
@@ -406,93 +406,93 @@ def test_delete_instance_success(client_with_db):
 
     # Upload instance
     instance_content = b"instance content"
-    upload_response = client_with_db.post(
+    upload_response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem_id}/instances",
         files={"file": ("instance.dzn", BytesIO(instance_content), "text/plain")},
     )
     instance_id = upload_response.json()["id"]
 
     # Delete instance
-    delete_response = client_with_db.delete(
+    delete_response = authed_client_with_db.delete(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/{instance_id}"
     )
     assert delete_response.status_code == 204
 
     # Verify instance no longer exists
-    get_response = client_with_db.get(
+    get_response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/{instance_id}"
     )
     assert get_response.status_code == 404
 
 
-def test_delete_instance_wrong_problem(client_with_db):
+def test_delete_instance_wrong_problem(authed_client_with_db):
     """Test deleting instance with wrong problem_id fails"""
     # Create group
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
     # Create two problems
-    problem1_response = client_with_db.post(
+    problem1_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 1", "group_ids": [group_id]},
     )
     problem1_id = problem1_response.json()["id"]
 
-    problem2_response = client_with_db.post(
+    problem2_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Problem 2", "group_ids": [group_id]},
     )
     problem2_id = problem2_response.json()["id"]
 
     # Upload instance to problem 1
-    upload_response = client_with_db.post(
+    upload_response = authed_client_with_db.post(
         f"/api/solverdirector/v1/problems/{problem1_id}/instances",
         files={"file": ("instance.dzn", BytesIO(b"content"), "text/plain")},
     )
     instance_id = upload_response.json()["id"]
 
     # Try to delete instance using problem 2's ID - should fail
-    delete_response = client_with_db.delete(
+    delete_response = authed_client_with_db.delete(
         f"/api/solverdirector/v1/problems/{problem2_id}/instances/{instance_id}"
     )
     assert delete_response.status_code == 404
 
     # Verify instance still exists under problem 1
-    get_response = client_with_db.get(
+    get_response = authed_client_with_db.get(
         f"/api/solverdirector/v1/problems/{problem1_id}/instances/{instance_id}"
     )
     assert get_response.status_code == 200
 
 
-def test_delete_nonexistent_instance(client_with_db):
+def test_delete_nonexistent_instance(authed_client_with_db):
     """Test deleting a non-existent instance returns 404"""
     # Create group and problem
-    group_response = client_with_db.post(
+    group_response = authed_client_with_db.post(
         "/api/solverdirector/v1/groups",
         json={"name": "test-group", "description": "Test"},
     )
     group_id = group_response.json()["id"]
 
-    problem_response = client_with_db.post(
+    problem_response = authed_client_with_db.post(
         "/api/solverdirector/v1/problems",
         json={"name": "Test Problem", "group_ids": [group_id]},
     )
     problem_id = problem_response.json()["id"]
 
     # Try to delete non-existent instance
-    delete_response = client_with_db.delete(
+    delete_response = authed_client_with_db.delete(
         f"/api/solverdirector/v1/problems/{problem_id}/instances/99999"
     )
     assert delete_response.status_code == 404
     assert "not found" in delete_response.json()["detail"].lower()
 
 
-def test_delete_instance_nonexistent_problem(client_with_db):
+def test_delete_instance_nonexistent_problem(authed_client_with_db):
     """Test deleting instance with non-existent problem returns 404"""
-    delete_response = client_with_db.delete(
+    delete_response = authed_client_with_db.delete(
         "/api/solverdirector/v1/problems/99999/instances/1"
     )
     assert delete_response.status_code == 404

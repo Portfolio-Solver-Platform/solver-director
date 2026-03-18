@@ -7,8 +7,13 @@ from datetime import datetime
 
 from src.database import get_db
 from src.models import Instance, Problem
+from src.auth import auth
 
 router = APIRouter()
+SCOPES = {
+    "read": "problems:read",
+    "write": "problems:write",
+}
 
 
 class InstanceResponse(BaseModel):
@@ -22,7 +27,15 @@ class InstanceResponse(BaseModel):
     uploaded_at: datetime
 
 
-@router.get("/problems/{problem_id}/instances", response_model=list[InstanceResponse])
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/problems/{problem_id}/instances",
+    response_model=list[InstanceResponse],
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def get_instances(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     """Get all instances for a specific problem"""
     # Verify problem exists
@@ -37,10 +50,16 @@ def get_instances(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     return instances
 
 
+scopes = [SCOPES["write"]]
+
+
 @router.post(
     "/problems/{problem_id}/instances",
     response_model=InstanceResponse,
     status_code=status.HTTP_201_CREATED,
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
 )
 async def upload_instance(
     problem_id: int,
@@ -79,8 +98,14 @@ async def upload_instance(
     return instance
 
 
+scopes = [SCOPES["read"]]
+
+
 @router.get(
-    "/problems/{problem_id}/instances/{instance_id}", response_model=InstanceResponse
+    "/problems/{problem_id}/instances/{instance_id}",
+    response_model=InstanceResponse,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def get_instance(
     problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]
@@ -107,7 +132,15 @@ def get_instance(
     return instance
 
 
-@router.get("/problems/{problem_id}/instances/{instance_id}/file")
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/problems/{problem_id}/instances/{instance_id}/file",
+    # TODO: re-enable auth once solver pods have a service account token
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
+)
 def download_instance(
     problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]
 ):
@@ -137,9 +170,14 @@ def download_instance(
     )
 
 
+scopes = [SCOPES["write"]]
+
+
 @router.delete(
     "/problems/{problem_id}/instances/{instance_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def delete_instance(
     problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]

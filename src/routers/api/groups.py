@@ -4,8 +4,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 from src.database import get_db
 from src.models import Group, Solver
+from src.auth import auth
 
 router = APIRouter()
+SCOPES = {
+    "read": "groups:read",
+    "write": "groups:write",
+}
 
 
 class GroupCreate(BaseModel):
@@ -52,13 +57,30 @@ class GroupResponse(BaseModel):
         return [solver.id for solver in solvers]
 
 
-@router.get("/groups", response_model=list[GroupResponse])
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/groups",
+    response_model=list[GroupResponse],
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
+)
 def get_groups(db: Annotated[Session, Depends(get_db)]):
     """Get all groups"""
     return db.query(Group).all()
 
 
-@router.get("/groups/{group_id}", response_model=GroupResponse)
+scopes = [SCOPES["read"]]
+
+
+@router.get(
+    "/groups/{group_id}",
+    response_model=GroupResponse,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def get_group(group_id: int, db: Annotated[Session, Depends(get_db)]):
     """Get a specific group"""
     group = db.query(Group).filter(Group.id == group_id).first()
@@ -69,7 +91,15 @@ def get_group(group_id: int, db: Annotated[Session, Depends(get_db)]):
     return group
 
 
-@router.patch("/groups/{group_id}", response_model=GroupResponse)
+scopes = [SCOPES["write"]]
+
+
+@router.patch(
+    "/groups/{group_id}",
+    response_model=GroupResponse,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def update_group(
     group_id: int,
     request: GroupUpdateRequest,
@@ -140,8 +170,16 @@ def update_group(
     return group
 
 
+scopes = [SCOPES["write"]]
+
+
 @router.post(
-    "/groups", response_model=GroupResponse, status_code=status.HTTP_201_CREATED
+    "/groups",
+    response_model=GroupResponse,
+    status_code=status.HTTP_201_CREATED,
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes(scopes)],
+    # openapi_extra=auth.scope_docs(scopes),
 )
 def create_group(group_data: GroupCreate, db: Annotated[Session, Depends(get_db)]):
     """Create a new group"""
@@ -165,7 +203,15 @@ def create_group(group_data: GroupCreate, db: Annotated[Session, Depends(get_db)
     return group
 
 
-@router.delete("/groups/{group_id}", status_code=status.HTTP_204_NO_CONTENT)
+scopes = [SCOPES["write"]]
+
+
+@router.delete(
+    "/groups/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
+)
 def delete_group(group_id: int, db: Annotated[Session, Depends(get_db)]):
     """Delete a group and all associated problems and instances"""
     group = db.query(Group).filter(Group.id == group_id).first()

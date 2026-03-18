@@ -118,6 +118,14 @@ spec:
               value: {{ .Values.postgres.database.password | quote }}
             - name: DATABASE_URL
               value: "postgresql://{{ .Values.postgres.database.user }}:{{ .Values.postgres.database.password }}@{{ .Values.postgres.service.name }}:{{ .Values.postgres.service.port }}/{{ .Values.postgres.database.name }}"
+            - name: DEFAULT_PER_USER_CPU_CORES
+              value: {{ .Values.resourceLimitDefaults.perUserCpuCores | quote }}
+            - name: DEFAULT_PER_USER_MEMORY_GIB
+              value: {{ .Values.resourceLimitDefaults.perUserMemoryGib | quote }}
+            - name: DEFAULT_GLOBAL_MAX_CPU_CORES
+              value: {{ .Values.resourceLimitDefaults.globalMaxCpuCores | quote }}
+            - name: DEFAULT_GLOBAL_MAX_MEMORY_GIB
+              value: {{ .Values.resourceLimitDefaults.globalMaxMemoryGib | quote }}
             - name: KEYCLOAK_CLIENT_ID
               valueFrom:
                 secretKeyRef:

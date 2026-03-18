@@ -98,6 +98,39 @@ def auth(monkeypatch):
 
 
 @pytest.fixture
+def authed_client_with_db(test_db, auth):
+    """Test client with DB and a token carrying all scopes — for business-logic tests."""
+    from src.main import app
+    from psp_auth.testing import MockToken
+
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    token = auth.issue_token(
+        MockToken(
+            scopes=[
+                "solvers:read",
+                "solvers:write",
+                "groups:read",
+                "groups:write",
+                "problems:read",
+                "problems:write",
+            ]
+        )
+    )
+
+    with TestClient(app, headers=auth.auth_header(token)) as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
 def client_with_db(test_db):
     """Test client with test database for database tests"""
     from src.main import app
