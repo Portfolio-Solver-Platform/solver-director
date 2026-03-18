@@ -17,7 +17,7 @@ DEFAULTS = {
 SAMPLE_CONFIGURATION = {
     "name": "queued-project",
     "timeout": 3600,
-    "cpu_cores": 1.0,
+    "vcpus": 1,
     "memory_gib": 2.0,
     "problem_groups": [
         {

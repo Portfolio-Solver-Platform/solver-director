@@ -61,8 +61,8 @@ def drain_queue(db: Session) -> None:
         # Per-user limit for this project's owner.
         user_config = db.query(UserResourceConfig).filter_by(user_id=project.user_id).first()
         effective_cpu = (
-            user_config.cpu_cores
-            if user_config and user_config.cpu_cores is not None
+            user_config.vcpus
+            if user_config and user_config.vcpus is not None
             else per_user_default_cpu
         )
         effective_mem = (
