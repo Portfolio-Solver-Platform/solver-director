@@ -23,9 +23,6 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       serviceAccountName: solver-director
-      imagePullSecrets:
-      - name: harbor-creds-pull
-
       securityContext:
         runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
         seccompProfile:
@@ -126,6 +123,10 @@ spec:
               value: {{ .Values.resourceLimitDefaults.globalMaxCpuCores | quote }}
             - name: DEFAULT_GLOBAL_MAX_MEMORY_GIB
               value: {{ .Values.resourceLimitDefaults.globalMaxMemoryGib | quote }}
+            - name: SOLVER_CONTROLLER_IMAGE
+              value: {{ .Values.solverController.image | quote }}
+            - name: DATA_GATHERER_IMAGE
+              value: {{ .Values.dataGatherer.image | quote }}
             - name: KEYCLOAK_CLIENT_ID
               valueFrom:
                 secretKeyRef:

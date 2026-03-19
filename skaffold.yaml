@@ -25,8 +25,10 @@ profiles:
             namespace: psp
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
+              solverController.image: "{{if .SOLVER_CONTROLLER_IMAGE}}{{.SOLVER_CONTROLLER_IMAGE}}{{else}}ghcr.io/portfolio-solver-platform/solver-controller:latest{{end}}"
+              dataGatherer.image: "{{if .DATA_GATHERER_IMAGE}}{{.DATA_GATHERER_IMAGE}}{{else}}ghcr.io/portfolio-solver-platform/data-gatherer:latest{{end}}"
 
-          
+
 
   - name: staging
     build:

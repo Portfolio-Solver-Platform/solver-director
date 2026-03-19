@@ -1,19 +1,11 @@
 from typing import Annotated
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, status
+from fastapi import APIRouter, HTTPException, Depends, Form, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
-import asyncio
 import re
-import json
-import base64
-import tempfile
-import os
-from kubernetes import client, config as k8s_config
-from prometheus_client import Counter
 
 from src.database import get_db
 from src.models import Solver, SolverImage
-from src.config import Config
 from src.auth import auth
 
 
@@ -27,52 +19,6 @@ SCOPES = {
 # Must start with lowercase letter or digit, followed by lowercase alphanumeric, dots, hyphens, or underscores
 # Max length: 128 characters
 VALID_IMAGE_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,127}$")
-
-# Prometheus metrics
-temp_file_cleanup_failures = Counter(
-    "solver_director_temp_file_cleanup_failures_total",
-    "Total number of temporary file cleanup failures",
-    ["operation"],
-)
-
-
-def get_harbor_credentials(secret_name: str = "harbor-creds-push"):  # nosec B107
-    """Reads Harbor credentials from a Kubernetes secret
-
-    Args:
-        secret_name: Name of the Harbor credentials secret (default: harbor-creds-push)
-
-    Returns:
-        Tuple of (username, password) for Harbor authentication
-
-    Note:
-        The default parameter is a Kubernetes secret name (resource identifier),
-        not a hardcoded password. Actual credentials are retrieved from K8s at runtime.
-    """
-    try:
-        k8s_config.load_incluster_config()
-        kube_client = client.CoreV1Api()
-
-        secret = kube_client.read_namespaced_secret(name=secret_name, namespace="psp")
-
-        # Docker config secrets store credentials in .dockerconfigjson
-        docker_config_json = base64.b64decode(secret.data[".dockerconfigjson"]).decode(
-            "utf-8"
-        )
-        docker_config = json.loads(docker_config_json)
-
-        # Extract credentials for harbor.local
-        auth_config = docker_config.get("auths", {}).get("harbor.local", {})
-        auth_string = auth_config.get("auth", "")
-
-        username, password = base64.b64decode(auth_string).decode("utf-8").split(":", 1)
-
-        return username, password
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get Harbor credentials: {str(e)}",
-        )
 
 
 class StartResponse(BaseModel):
@@ -178,9 +124,12 @@ scopes = [SCOPES["write"]]
     # dependencies=[auth.require_scopes(scopes)],
     # openapi_extra=auth.scope_docs(scopes),
 )
-async def upload_solver(
+def register_solver(
     image_name: Annotated[
-        str, Form(description="Docker image name for Harbor (e.g., 'minizinc-solver')")
+        str, Form(description="Short image name (e.g., 'minizinc-solvers')")
+    ],
+    image_url: Annotated[
+        str, Form(description="Full image URL (e.g., 'ghcr.io/portfolio-solver-platform/minizinc-solvers:latest')")
     ],
     names: Annotated[
         str,
@@ -188,19 +137,9 @@ async def upload_solver(
             description="Comma-separated solver names (e.g., 'chuffed,gecode,ortools')"
         ),
     ],
-    file: Annotated[UploadFile, File(description="Docker image tarball (.tar file)")],
     db: Annotated[Session, Depends(get_db)],
 ):
-    """Upload a Docker image tarball and push to Harbor
-
-    Args:
-        image_name: Docker image name for Harbor (e.g., "minizinc-solver")
-        names: Comma-separated solver names that this image supports (e.g., "chuffed,gecode,ortools")
-        file: Docker image tarball (.tar file)
-
-    Returns:
-        SolverResponse with solver metadata including Harbor image path
-    """
+    """Register a solver image by its registry URL."""
     normalized_image_name = image_name.strip().lower()
     if not normalized_image_name:
         raise HTTPException(
@@ -212,6 +151,12 @@ async def upload_solver(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Image name must be lowercase alphanumeric, may contain dots, hyphens, or underscores, and must start with a letter or digit",
+        )
+
+    if not image_url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Image URL cannot be empty",
         )
 
     name_list = [n.strip().lower() for n in names.split(",") if n.strip()]
@@ -239,69 +184,9 @@ async def upload_solver(
             detail=f"Solver image '{normalized_image_name}' already exists",
         )
 
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="File is required"
-        )
-
-    file_data = await file.read()
-    if not file_data:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="File cannot be empty",
-        )
-
-    tarball_path = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".tar") as tmp:
-            tmp.write(file_data)
-            tarball_path = tmp.name
-
-        username, password = get_harbor_credentials()
-
-        registry_image_name = f"{Config.ArtifactRegistry.INTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_image_name}:latest"
-        external_image_name = f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.ArtifactRegistry.PROJECT}/{normalized_image_name}:latest"
-
-        skopeo_args = [
-            "skopeo",
-            "copy",
-            f"docker-archive:{tarball_path}",
-            f"docker://{registry_image_name}",
-            "--dest-creds",
-            f"{username}:{password}",
-        ]
-
-        if not Config.ArtifactRegistry.TLS_VERIFY:
-            skopeo_args.append("--dest-tls-verify=false")
-
-        # Safe: subprocess uses list args (no shell), Harbor RBAC restricts push to psp-solvers project only
-        # nosec B603
-        process = await asyncio.create_subprocess_exec(
-            *skopeo_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-
-        try:
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=300,  # 5 minute timeout
-            )
-        except asyncio.TimeoutError:
-            process.kill()
-            await process.wait()
-            db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Image push timed out",
-            )
-
-        if process.returncode != 0:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to push image to Harbor: {stderr.decode('utf-8')}",
-            )
-
         solver_image = SolverImage(
-            image_name=normalized_image_name, image_path=external_image_name
+            image_name=normalized_image_name, image_path=image_url.strip()
         )
         db.add(solver_image)
         db.flush()
@@ -317,7 +202,7 @@ async def upload_solver(
             id=solver_image.id,
             names=name_list,
             solver_images_id=solver_image.id,
-            image_path=external_image_name,
+            image_path=image_url.strip(),
         )
 
     except HTTPException:
@@ -327,11 +212,47 @@ async def upload_solver(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload solver: {str(e)}",
+            detail=f"Failed to register solver: {str(e)}",
         )
-    finally:
-        if tarball_path and os.path.exists(tarball_path):
-            try:
-                os.unlink(tarball_path)
-            except Exception:
-                temp_file_cleanup_failures.labels(operation="solver_upload").inc()
+
+
+@router.patch(
+    "/solvers/images/{image_name}",
+    response_model=SolverUploadResponse,
+    # TODO: re-enable auth once setup scripts have service account credentials
+    # dependencies=[auth.require_scopes([SCOPES["write"]])],
+    # openapi_extra=auth.scope_docs([SCOPES["write"]]),
+)
+def update_solver_image_url(
+    image_name: str,
+    image_url: Annotated[str, Form(description="New full image URL")],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Update the image URL for an existing solver image by name."""
+    solver_image = (
+        db.query(SolverImage)
+        .filter(SolverImage.image_name == image_name.strip().lower())
+        .first()
+    )
+    if not solver_image:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Solver image '{image_name}' not found",
+        )
+
+    if not image_url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Image URL cannot be empty",
+        )
+
+    solver_image.image_path = image_url.strip()
+    db.commit()
+    db.refresh(solver_image)
+
+    return SolverUploadResponse(
+        id=solver_image.id,
+        names=[s.name for s in solver_image.solvers],
+        solver_images_id=solver_image.id,
+        image_path=solver_image.image_path,
+    )
