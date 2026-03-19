@@ -54,27 +54,6 @@ def start_project_services(project_config, id, user_id):
         else:
             raise
 
-    template_secret = kube_client.read_namespaced_secret(
-        name="harbor-creds-pull", namespace="psp"
-    )
-
-    # create 2 namespaces. One for infrastructure for project and the Data Gatherer/AI. Another namepace for the solvers themselves.
-    control_secret = client.V1Secret(
-        metadata=client.V1ObjectMeta(name="harbor-creds", namespace=id),
-        type=template_secret.type,
-        data=template_secret.data,
-    )
-    kube_client.create_namespaced_secret(namespace=id, body=control_secret)
-
-    solvers_secret = client.V1Secret(
-        metadata=client.V1ObjectMeta(name="harbor-creds", namespace=_solvers_namespace),
-        type=template_secret.type,
-        data=template_secret.data,
-    )
-    kube_client.create_namespaced_secret(
-        namespace=_solvers_namespace, body=solvers_secret
-    )
-
     # Create Role in solvers namespace to allow creating deployments and scaledobjects
     role = client.V1Role(
         metadata=client.V1ObjectMeta(
@@ -219,7 +198,6 @@ def create_solver_controller_pod_manifest(project_id, control_queue, result_queu
             "labels": {"solver_controller_id": "solver-controller"},
         },
         "spec": {
-            "imagePullSecrets": [{"name": "harbor-creds"}],
             "securityContext": {
                 "runAsNonRoot": True,
                 "seccompProfile": {"type": "RuntimeDefault"},
@@ -227,7 +205,7 @@ def create_solver_controller_pod_manifest(project_id, control_queue, result_queu
             "containers": [
                 {
                     "name": "solver-controller",
-                    "image": f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.SolverController.ARTIFACT_REGISTRY_PATH}",
+                    "image": Config.SolverController.IMAGE,
                     "imagePullPolicy": "IfNotPresent",
                     "ports": [
                         {"containerPort": Config.SolverController.CONTAINER_PORT}
@@ -312,7 +290,6 @@ def create_data_gatherer_pod_manifest(
             "labels": {"data_gatherer_id": "data-gatherer"},
         },
         "spec": {
-            "imagePullSecrets": [{"name": "harbor-creds"}],
             "securityContext": {
                 "runAsNonRoot": True,
                 "seccompProfile": {"type": "RuntimeDefault"},
@@ -320,7 +297,7 @@ def create_data_gatherer_pod_manifest(
             "containers": [
                 {
                     "name": "data-gatherer",
-                    "image": f"{Config.ArtifactRegistry.EXTERNAL_URL}{Config.DataGatherer.ARTIFACT_REGISTRY_PATH}",
+                    "image": Config.DataGatherer.IMAGE,
                     "imagePullPolicy": "IfNotPresent",
                     "ports": [{"containerPort": Config.DataGatherer.CONTAINER_PORT}],
                     "env": [

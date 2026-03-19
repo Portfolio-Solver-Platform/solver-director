@@ -108,6 +108,12 @@ postgres:
     size: "1Gi"
     storageClass: "postgres-retain"
 
+solverController:
+  image: "ghcr.io/portfolio-solver-platform/solver-controller:latest"
+
+dataGatherer:
+  image: "ghcr.io/portfolio-solver-platform/data-gatherer:latest"
+
 resourceLimitDefaults:
   perUserCpuCores: "8"
   perUserMemoryGib: "32"

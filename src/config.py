@@ -13,23 +13,14 @@ class Config:
         VERSION = "v1"
         ROOT_PATH = "/api/solverdirector"
 
-    class ArtifactRegistry:
-        EXTERNAL_URL = os.getenv("EXTERNAL_ARTIFACT_REGISTRY_URL", "harbor.local/")
-        # Internal registry URL for skopeo (defaults to harbor-core service)
-        INTERNAL_URL = os.getenv(
-            "INTERNAL_ARTIFACT_REGISTRY_URL", "harbor-core.harbor.svc.cluster.local/"
-        )
-        PROJECT = "psp-solvers"
-        TLS_VERIFY = os.getenv("HARBOR_TLS_VERIFY", "false") == "true"
-
     class SolverController:
-        ARTIFACT_REGISTRY_PATH = "psp/solver-controller:latest"
+        IMAGE = os.getenv("SOLVER_CONTROLLER_IMAGE", "ghcr.io/portfolio-solver-platform/solver-controller:latest")
         SVC_NAME = "solver-controller"
         CONTAINER_PORT = 8080
         SERVICE_PORT = 80
 
     class DataGatherer:
-        ARTIFACT_REGISTRY_PATH = "psp/data-gatherer:latest"
+        IMAGE = os.getenv("DATA_GATHERER_IMAGE", "ghcr.io/portfolio-solver-platform/data-gatherer:latest")
         SVC_NAME = "data-gatherer"
         CONTAINER_PORT = 8080
         SERVICE_PORT = 80

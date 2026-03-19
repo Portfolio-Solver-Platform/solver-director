@@ -209,7 +209,7 @@ def test_update_group_solvers_only(authed_client_with_db, test_db):
 
     # Create solvers
     solver_image1 = SolverImage(
-        image_name="solver1", image_path="harbor.local/psp-solvers/solver1:latest"
+        image_name="solver1", image_path="ghcr.io/portfolio-solver-platform/solver1:latest"
     )
     test_db.add(solver_image1)
     test_db.flush()
@@ -218,7 +218,7 @@ def test_update_group_solvers_only(authed_client_with_db, test_db):
     test_db.add(solver1)
 
     solver_image2 = SolverImage(
-        image_name="solver2", image_path="harbor.local/psp-solvers/solver2:latest"
+        image_name="solver2", image_path="ghcr.io/portfolio-solver-platform/solver2:latest"
     )
     test_db.add(solver_image2)
     test_db.flush()
@@ -249,7 +249,7 @@ def test_update_group_all_fields(authed_client_with_db, test_db):
 
     # Create solver
     solver_image = SolverImage(
-        image_name="solver", image_path="harbor.local/psp-solvers/solver:latest"
+        image_name="solver", image_path="ghcr.io/portfolio-solver-platform/solver:latest"
     )
     test_db.add(solver_image)
     test_db.flush()
@@ -343,7 +343,7 @@ def test_update_group_duplicate_solver_ids(authed_client_with_db, test_db):
 
     # Create solver
     solver_image = SolverImage(
-        image_name="solver", image_path="harbor.local/psp-solvers/solver:latest"
+        image_name="solver", image_path="ghcr.io/portfolio-solver-platform/solver:latest"
     )
     test_db.add(solver_image)
     test_db.flush()
