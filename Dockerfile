@@ -15,14 +15,14 @@ WORKDIR /home/appuser/app
 
 ENV PATH="/home/appuser/app/.venv/bin:${PATH}"
 
-COPY --chown=10001:10001 pyproject.toml .
-COPY --chown=10001:10001 uv.lock .
+COPY pyproject.toml .
+COPY uv.lock .
 
 
 FROM base AS dev
 RUN uv sync --frozen --no-install-project
-COPY --chown=10001:10001 src/ ./src/
-COPY --chown=10001:10001 tests/ ./tests/
+COPY src/ ./src/
+COPY tests/ ./tests/
 COPY alembic.ini .
 COPY alembic/ ./alembic/
 RUN uv sync --frozen
@@ -32,7 +32,7 @@ CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "-k", "uvicorn.work
 
 FROM base AS runtime
 RUN uv sync --frozen --no-dev --no-install-project
-COPY --chown=10001:10001 src/ ./src/
+COPY src/ ./src/
 COPY alembic.ini .
 COPY alembic/ ./alembic/
 RUN uv sync --frozen --no-dev
