@@ -170,7 +170,7 @@ psycopg2-binary==2.9.11
     # via solver-director (pyproject.toml)
 py-serializable==2.1.0
     # via cyclonedx-python-lib
-pycparser==2.23
+pycparser==3.0
     # via cffi
 pydantic==2.12.5
     # via

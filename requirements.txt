@@ -125,7 +125,7 @@ psp-auth==2.0.1
     # via solver-director (pyproject.toml)
 psycopg2-binary==2.9.11
     # via solver-director (pyproject.toml)
-pycparser==2.23
+pycparser==3.0
     # via cffi
 pydantic==2.12.5
     # via
