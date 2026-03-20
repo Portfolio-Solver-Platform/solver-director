@@ -109,7 +109,7 @@ multidict==6.7.0
     # via yarl
 oauthlib==3.3.1
     # via requests-oauthlib
-packaging==25.0
+packaging==26.0
     # via gunicorn
 pamqp==3.3.0
     # via aiormq
