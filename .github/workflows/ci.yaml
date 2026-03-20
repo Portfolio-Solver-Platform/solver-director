@@ -13,4 +13,4 @@ jobs:
 
     uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/python-ci.yaml@main
     with:
-      code_audit_targets: "./src/"
+      code_audit_targets: "./src/ ./alembic/"
