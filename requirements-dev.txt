@@ -6,7 +6,7 @@
 #
 aio-pika==9.6.1
     # via solver-director (pyproject.toml)
-aiormq==6.9.2
+aiormq==6.9.3
     # via aio-pika
 alembic==1.18.4
     # via solver-director (pyproject.toml)
@@ -14,14 +14,14 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anyio==4.11.0
+anyio==4.12.1
     # via
     #   httpx
     #   starlette
     #   watchfiles
 asyncpg==0.31.0
     # via solver-director (pyproject.toml)
-bandit==1.9.2
+bandit==1.9.4
     # via solver-director (pyproject.toml)
 boolean-py==5.0
     # via license-expression
@@ -38,14 +38,14 @@ certifi==2025.11.12
     #   sentry-sdk
 cffi==2.0.0
     # via cryptography
-charset-normalizer==3.4.4
+charset-normalizer==3.4.6
     # via requests
 click==8.3.1
     # via
     #   rich-toolkit
     #   typer
     #   uvicorn
-coverage==7.12.0
+coverage==7.13.5
     # via pytest-cov
 cryptography==46.0.5
     # via
@@ -69,13 +69,13 @@ fastapi==0.135.1
     # via
     #   psp-auth
     #   solver-director (pyproject.toml)
-fastapi-cli==0.0.16
+fastapi-cli==0.0.24
     # via fastapi
-fastapi-cloud-cli==0.5.2
+fastapi-cloud-cli==0.15.0
     # via fastapi-cli
 fastar==0.8.0
     # via fastapi-cloud-cli
-filelock==3.25.1
+filelock==3.25.2
     # via
     #   cachecontrol
     #   solver-director (pyproject.toml)
@@ -130,7 +130,7 @@ mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.1.2
     # via cachecontrol
-multidict==6.7.0
+multidict==6.7.1
     # via yarl
 oauthlib==3.3.1
     # via requests-oauthlib
@@ -152,13 +152,13 @@ pip-audit==2.10.0
     # via solver-director (pyproject.toml)
 pip-requirements-parser==32.0.1
     # via pip-audit
-platformdirs==4.5.0
+platformdirs==4.9.4
     # via pip-audit
 pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
-prometheus-client==0.23.1
+prometheus-client==0.24.1
     # via prometheus-fastapi-instrumentator
 prometheus-fastapi-instrumentator==7.1.0
     # via solver-director (pyproject.toml)
@@ -178,9 +178,9 @@ pydantic==2.12.5
     #   fastapi-cloud-cli
     #   pydantic-extra-types
     #   pydantic-settings
-pydantic-core==2.41.5
+pydantic-core==2.42.0
     # via pydantic
-pydantic-extra-types==2.11.0
+pydantic-extra-types==2.11.1
     # via fastapi
 pydantic-settings==2.13.1
     # via fastapi
@@ -188,9 +188,9 @@ pygments==2.19.2
     # via
     #   pytest
     #   rich
-pyparsing==3.2.5
+pyparsing==3.3.2
     # via pip-requirements-parser
-pytest==9.0.1
+pytest==9.0.2
     # via
     #   pytest-cov
     #   pytest-mock
@@ -201,7 +201,7 @@ pytest-mock==3.15.1
     # via solver-director (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via kubernetes
-python-dotenv==1.2.1
+python-dotenv==1.2.2
     # via
     #   pydantic-settings
     #   uvicorn
@@ -223,21 +223,21 @@ requests==2.32.5
     #   solver-director (pyproject.toml)
 requests-oauthlib==2.0.0
     # via kubernetes
-rich==14.2.0
+rich==14.3.3
     # via
     #   bandit
     #   pip-audit
     #   rich-toolkit
     #   typer
-rich-toolkit==0.17.0
+rich-toolkit==0.19.7
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
 rignore==0.7.6
     # via fastapi-cloud-cli
-ruff==0.15.5
+ruff==0.15.7
     # via solver-director (pyproject.toml)
-sentry-sdk==2.46.0
+sentry-sdk==2.55.0
     # via fastapi-cloud-cli
 shellingham==1.5.4
     # via typer
@@ -253,17 +253,17 @@ sqlalchemy==2.0.48
     # via
     #   alembic
     #   solver-director (pyproject.toml)
-starlette==0.49.3
+starlette==0.52.1
     # via
     #   fastapi
     #   prometheus-fastapi-instrumentator
-stevedore==5.6.0
+stevedore==5.7.0
     # via bandit
 tomli==2.4.0
     # via pip-audit
 tomli-w==1.2.0
     # via pip-audit
-typer==0.20.0
+typer==0.24.1
     # via
     #   fastapi-cli
     #   fastapi-cloud-cli
@@ -289,7 +289,7 @@ urllib3==2.6.3
     #   requests
     #   sentry-sdk
     #   solver-director (pyproject.toml)
-uvicorn==0.38.0
+uvicorn==0.42.0
     # via
     #   fastapi
     #   fastapi-cli
@@ -302,7 +302,7 @@ websocket-client==1.9.0
     # via kubernetes
 websockets==15.0.1
     # via uvicorn
-yarl==1.22.0
+yarl==1.23.0
     # via
     #   aio-pika
     #   aiormq
