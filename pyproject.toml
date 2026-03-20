@@ -1,6 +1,7 @@
 [project]
 name = "solver-director"
 version = "0.1.0"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.135,<0.136",
     "prometheus-fastapi-instrumentator>=7.1.0,<8.0",
@@ -15,14 +16,14 @@ dependencies = [
     "dacite>=1.8,<2.0",
     "psp-auth>=2,<3.0",
     "asyncpg>=0.31.0,<1.0",
-    # Security: minimum versions required to satisfy vulnerability checks          
+    # Security: minimum versions required to satisfy vulnerability checks
     "cryptography>=46.0.5",
     "joserfc>=1.6.3",
     "python-multipart>=0.0.22",
     "urllib3>=2.6.3",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=9,<10",
     "pytest-cov>=7,<8",
