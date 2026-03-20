@@ -51,7 +51,7 @@ cryptography==46.0.5
     # via
     #   joserfc
     #   solver-director (pyproject.toml)
-cyclonedx-python-lib==9.1.0
+cyclonedx-python-lib==11.7.0
     # via pip-audit
 dacite==1.9.2
     # via solver-director (pyproject.toml)
