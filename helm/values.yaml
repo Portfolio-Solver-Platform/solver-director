@@ -82,7 +82,7 @@ postgres:
   enabled: true
   image:
     repository: postgres
-    tag: "15"
+    tag: "15@sha256:c635fa3e3b7421a659d34abdfd6d492f679cbe8149e261a501237b55c5a94212"
     pullPolicy: IfNotPresent
   replicaCount: 1
   containerName: postgresql
@@ -109,10 +109,10 @@ postgres:
     storageClass: "postgres-retain"
 
 solverController:
-  image: "ghcr.io/portfolio-solver-platform/solver-controller:latest"
+  image: "ghcr.io/portfolio-solver-platform/solver-controller:latest@sha256:f3d6738ec3762a9b9c76965d4024f33f39fec397c19eab125607e8abb1443641"
 
 dataGatherer:
-  image: "ghcr.io/portfolio-solver-platform/data-gatherer:latest"
+  image: "ghcr.io/portfolio-solver-platform/data-gatherer:latest@sha256:1bf6b0434aa22626bba9e5492c8a7980fca00cfa07566a659a9fe07a300534b1"
 
 resourceLimitDefaults:
   perUserCpuCores: "8"
