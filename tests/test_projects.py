@@ -3,7 +3,7 @@
 import uuid
 from unittest.mock import patch, MagicMock
 from psp_auth.testing import MockToken, MockUser
-from src.models import ResourceDefaults, Project as ProjectModel
+from src.models import ResourceDefaults, UserResourceConfig, Project as ProjectModel
 
 # Test data
 VALID_CONFIG = {
@@ -863,6 +863,51 @@ def test_delete_project_triggers_queue_drain(client_with_db, auth, test_db):
     mock_drain_start.assert_called_once()
     p2 = test_db.query(ProjectModel).filter_by(id=uuid.UUID(project2_id)).first()
     assert p2.is_queued is False
+
+
+def test_create_project_rejected_when_cpu_exceeds_user_limit(client_with_db, auth, test_db):
+    """Project creation returns 422 when vcpus exceeds the per-user CPU limit."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # per_user_cpu=3.0
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    over_cpu_config = {**VALID_CONFIG, "vcpus": 4}  # 4 > per_user_cpu=3.0
+    response = client_with_db.post(
+        "/v1/projects", json=over_cpu_config, headers=auth.auth_header(token)
+    )
+    assert response.status_code == 422
+    assert "vcpus" in response.json()["detail"]
+
+
+def test_create_project_rejected_when_memory_exceeds_user_limit(client_with_db, auth, test_db):
+    """Project creation returns 422 when memory_gib exceeds the per-user memory limit."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # per_user_mem=8.0
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"]))
+    over_mem_config = {**VALID_CONFIG, "memory_gib": 9.0}  # 9.0 > per_user_mem=8.0
+    response = client_with_db.post(
+        "/v1/projects", json=over_mem_config, headers=auth.auth_header(token)
+    )
+    assert response.status_code == 422
+    assert "memory_gib" in response.json()["detail"]
+
+
+def test_create_project_rejected_when_cpu_exceeds_global_cap(client_with_db, auth, test_db):
+    """Project creation returns 422 when vcpus exceeds the global CPU cap even if
+    the user has a custom override higher than the global cap."""
+    test_db.add(ResourceDefaults(id=1, **QUOTA_DEFAULTS))  # global_max_cpu=6.0
+    user = MockUser(id="user-a")
+    test_db.add(UserResourceConfig(user_id=user.id, vcpus=7, memory_gib=None))
+    test_db.commit()
+
+    token = auth.issue_token(MockToken(scopes=["projects:write"], user=user))
+    over_global_config = {**VALID_CONFIG, "vcpus": 7}  # 7 > global_max_cpu=6.0
+    response = client_with_db.post(
+        "/v1/projects", json=over_global_config, headers=auth.auth_header(token)
+    )
+    assert response.status_code == 422
+    assert "vcpus" in response.json()["detail"]
 
 
 def test_project_starts_despite_other_user_at_per_user_cap(client_with_db, auth, test_db):

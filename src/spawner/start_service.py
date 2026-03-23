@@ -169,7 +169,7 @@ def start_project_services(project_config, id, user_id):
     connection = pika.BlockingConnection(parameters)
     try:
         channel = connection.channel()
-        channel.queue_declare(queue=director_queue, durable=True)
+        channel.queue_declare(queue=director_queue, durable=True, arguments={"x-queue-type": "quorum"})
         body = json.dumps(
             {"problem_groups": project_config.model_dump()["problem_groups"]}
         ).encode()

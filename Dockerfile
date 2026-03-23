@@ -25,7 +25,7 @@ COPY alembic/ ./alembic/
 COPY src/ ./src/
 COPY tests/ ./tests/
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
 
 
 FROM base AS runtime
@@ -35,6 +35,6 @@ COPY alembic.ini .
 COPY alembic/ ./alembic/
 COPY src/ ./src/
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
 
 

@@ -87,10 +87,10 @@ postgres:
   replicaCount: 1
   containerName: postgresql
   service:
-    name: "postgres-postgresql"
+    name: "solver-director-postgres"
     port: 5432
   database:
-    name: "appdb"
+    name: "solver_director"
     user: "appuser"
     password: "devpassword123"
   securityContext:

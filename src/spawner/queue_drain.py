@@ -37,6 +37,7 @@ def drain_queue(db: Session) -> None:
         db.query(Project)
         .filter_by(is_queued=True)
         .order_by(Project.created_at)
+        .with_for_update(skip_locked=True)
         .all()
     )
 

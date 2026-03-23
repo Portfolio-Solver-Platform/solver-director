@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: {{ .Values.postgres.service.name }}
   labels:
-    app: postgres-postgresql
+    app: {{ .Values.postgres.service.name }}
 spec:
   replicas: {{ .Values.postgres.replicaCount }}
   selector:
     matchLabels:
-      app: postgres-postgresql
+      app: {{ .Values.postgres.service.name }}
   template:
     metadata:
       labels:
-        app: postgres-postgresql
+        app: {{ .Values.postgres.service.name }}
     spec:
       securityContext:
         runAsNonRoot: {{ .Values.postgres.securityContext.runAsNonRoot }}

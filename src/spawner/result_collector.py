@@ -3,6 +3,7 @@ import logging
 import aio_pika
 from src.spawner.stop_service import stop_solver_controller
 from src.spawner.queue_drain import drain_queue
+from src.spawner.queues import declare_quorum_queue, retry_or_dlq
 from src.utils import solver_director_result_queue_name
 from src.database import SessionLocal
 from src.config import Config
@@ -28,51 +29,48 @@ async def result_collector():
 
     async with connection:
         channel = await connection.channel()
-        queue = await channel.declare_queue(solver_director_result_queue, durable=True)
+        queue = await declare_quorum_queue(channel, solver_director_result_queue)
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
-                async with message.process():
-                    db = SessionLocal()
-                    try:
-                        logger.info("Received result message")
-                        result_data = message.body.decode()
-                        result_json = json.loads(result_data)
-                        is_final = result_json.get("final_message", False)
-                        if is_final:
-                            try:
-                                stop_solver_controller(result_json["project_id"])
-                            except Exception as cleanup_error:
-                                logger.warning(
-                                    f"Failed to cleanup project {result_json.get('project_id')}: {cleanup_error}"
-                                )
-                            project = db.query(Project).filter(
-                                Project.id == result_json["project_id"]
-                            ).first()
-                            if project:
-                                project.is_complete = True
-                            result_json.pop("final_message", None)
-                            result_json.pop("total_messages", None)
-
-                        result = ProjectResult.from_json(result_json)
-
-                        db.add(result)
-                        db.commit()
-
-                        if is_final:
-                            try:
-                                drain_queue(db)
-                            except Exception as e:
-                                logger.error(f"Queue drain failed after project completion: {e}")
-                    except Exception as e:
-                        db.rollback()
-                        # Check if this is a foreign key violation for a deleted project
-                        if "project_results_project_id_fkey" in str(e):
+                db = SessionLocal()
+                try:
+                    logger.info("Received result message")
+                    result_data = message.body.decode()
+                    result_json = json.loads(result_data)
+                    is_final = result_json.get("final_message", False)
+                    if is_final:
+                        try:
+                            stop_solver_controller(result_json["project_id"])
+                        except Exception as cleanup_error:
                             logger.warning(
-                                f"Ignoring result for deleted project {result_json.get('project_id')}"
+                                f"Failed to cleanup project {result_json.get('project_id')}: {cleanup_error}"
                             )
-                            # Don't raise - this will acknowledge and discard the message
-                        else:
-                            logger.error(f"Failed to save result: {e}", exc_info=True)
-                            raise
-                    finally:
-                        db.close()
+                        project = db.query(Project).filter(
+                            Project.id == result_json["project_id"]
+                        ).first()
+                        if project:
+                            project.is_complete = True
+                        result_json.pop("final_message", None)
+                        result_json.pop("total_messages", None)
+
+                    result = ProjectResult.from_json(result_json)
+                    db.add(result)
+                    db.commit()
+
+                    if is_final:
+                        try:
+                            drain_queue(db)
+                        except Exception as e:
+                            logger.error(f"Queue drain failed after project completion: {e}")
+
+                    await message.ack()
+                except Exception as e:
+                    db.rollback()
+                    if "project_results_project_id_fkey" in str(e):
+                        logger.warning(f"Ignoring result for deleted project {result_json.get('project_id')}")
+                        await message.ack()
+                    else:
+                        logger.error(f"Failed to save result: {e}", exc_info=True)
+                        await retry_or_dlq(channel, solver_director_result_queue, message, e)
+                finally:
+                    db.close()

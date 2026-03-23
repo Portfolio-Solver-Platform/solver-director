@@ -26,7 +26,7 @@ def delete_project_queues(project_id):
 
     project_prefix = f"project-{project_id}-"
     for queue in queues:
-        if queue["name"].startswith(project_prefix):
+        if queue["name"].startswith(project_prefix) or queue["name"] == project_id:
             response = requests.delete(
                 f"{management_url}/api/queues/%2F/{quote(queue['name'], safe='')}",
                 auth=auth,

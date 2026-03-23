@@ -26,9 +26,9 @@ class Config:
         SERVICE_PORT = 80
 
     class Database:
-        HOST = os.getenv("DB_HOST", "postgres-postgresql")
+        HOST = os.getenv("DB_HOST", "solver-director-postgres")
         PORT = int(os.getenv("DB_PORT", "5432"))
-        NAME = os.getenv("DB_NAME", "appdb")
+        NAME = os.getenv("DB_NAME", "solver_director")
         USER = os.getenv("DB_USER", "appuser")
         PASSWORD = os.getenv("DB_PASSWORD", "devpassword123")
 
@@ -45,9 +45,9 @@ class Config:
         SOLVER_DIRECTOR_RESULT_QUEUE = "solver_director_result_queue"
 
     class ResourceLimitDefaults:
-        PER_USER_CPU_CORES = float(os.getenv("DEFAULT_PER_USER_CPU_CORES", "3.0"))
+        PER_USER_CPU_CORES = float(os.getenv("DEFAULT_PER_USER_CPU_CORES", "5.0"))
         PER_USER_MEMORY_GIB = float(os.getenv("DEFAULT_PER_USER_MEMORY_GIB", "8.0"))
-        GLOBAL_MAX_CPU_CORES = float(os.getenv("DEFAULT_GLOBAL_MAX_CPU_CORES", "4.0"))
+        GLOBAL_MAX_CPU_CORES = float(os.getenv("DEFAULT_GLOBAL_MAX_CPU_CORES", "6.0"))
         GLOBAL_MAX_MEMORY_GIB = float(os.getenv("DEFAULT_GLOBAL_MAX_MEMORY_GIB", "12.0"))
 
     class Keda:
