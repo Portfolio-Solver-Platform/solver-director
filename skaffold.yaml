@@ -14,6 +14,17 @@ profiles:
   - name: dev
     activation:
       - command: dev
+    patches:
+      - op: add
+        path: /build/artifacts/-
+        value:
+          image: solver-controller-skaffold
+          context: ../solver-controller
+      - op: add
+        path: /build/artifacts/-
+        value:
+          image: data-gatherer-skaffold
+          context: ../data-gatherer
     build:
       local:
         push: false
@@ -24,9 +35,9 @@ profiles:
             chartPath: helm
             namespace: psp
             setValueTemplates:
-              image: "{{.IMAGE_FULLY_QUALIFIED}}"
-              solverController.image: "{{if .SOLVER_CONTROLLER_IMAGE}}{{.SOLVER_CONTROLLER_IMAGE}}{{else}}ghcr.io/portfolio-solver-platform/solver-controller:latest{{end}}"
-              dataGatherer.image: "{{if .DATA_GATHERER_IMAGE}}{{.DATA_GATHERER_IMAGE}}{{else}}ghcr.io/portfolio-solver-platform/data-gatherer:latest{{end}}"
+              image: "{{.IMAGE_FULLY_QUALIFIED_solver_director_skaffold}}"
+              solverController.image: "{{.IMAGE_FULLY_QUALIFIED_solver_controller_skaffold}}"
+              dataGatherer.image: "{{.IMAGE_FULLY_QUALIFIED_data_gatherer_skaffold}}"
 
 
 

@@ -1,4 +1,3 @@
-
 FROM python:3.13-slim AS base
 
 # Install uv
@@ -28,7 +27,7 @@ COPY alembic/ ./alembic/
 RUN uv sync --frozen
 USER 10001
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "2", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
 
 FROM base AS runtime
 RUN uv sync --frozen --no-dev --no-install-project
@@ -38,5 +37,4 @@ COPY alembic/ ./alembic/
 RUN uv sync --frozen --no-dev
 USER 10001
 EXPOSE 8080
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "4", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]
-
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--workers", "1", "-k", "uvicorn.workers.UvicornWorker", "src.main:app"]

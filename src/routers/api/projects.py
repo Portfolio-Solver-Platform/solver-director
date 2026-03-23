@@ -136,6 +136,36 @@ def create_project(
     """Create a new project. Starts immediately if resources are available and the
     queue is empty, otherwise joins the FIFO queue.
     """
+    defaults_row = db.query(ResourceDefaults).filter_by(id=1).first()
+    if defaults_row is None:
+        global_max_cpu = Config.ResourceLimitDefaults.GLOBAL_MAX_CPU_CORES
+        global_max_mem = Config.ResourceLimitDefaults.GLOBAL_MAX_MEMORY_GIB
+        per_user_cpu = Config.ResourceLimitDefaults.PER_USER_CPU_CORES
+        per_user_mem = Config.ResourceLimitDefaults.PER_USER_MEMORY_GIB
+    else:
+        global_max_cpu = defaults_row.global_max_cpu_cores
+        global_max_mem = defaults_row.global_max_memory_gib
+        per_user_cpu = defaults_row.per_user_cpu_cores
+        per_user_mem = defaults_row.per_user_memory_gib
+
+    user_config = db.query(UserResourceConfig).filter_by(user_id=user.id).first()
+    effective_cpu = user_config.vcpus if user_config and user_config.vcpus is not None else per_user_cpu
+    effective_mem = user_config.memory_gib if user_config and user_config.memory_gib is not None else per_user_mem
+
+    cpu_limit = min(effective_cpu, global_max_cpu)
+    mem_limit = min(effective_mem, global_max_mem)
+
+    if config.vcpus > cpu_limit:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"vcpus ({config.vcpus}) exceeds your resource limit ({cpu_limit})",
+        )
+    if config.memory_gib > mem_limit:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"memory_gib ({config.memory_gib}) exceeds your resource limit ({mem_limit})",
+        )
+
     queued = _should_queue(user.id, config.vcpus, config.memory_gib, db)
 
     project = Project(

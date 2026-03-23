@@ -2,14 +2,14 @@
   set -e
 
   echo "Starting port-forward to postgres..."
-  kubectl port-forward -n psp svc/postgres-postgresql 5432:5432 &
+  kubectl port-forward -n psp svc/solver-director-postgres 5432:5432 &
   PORT_FORWARD_PID=$!
 
   # Wait for port-forward to be ready
   sleep 3
 
   echo "Upgrading database..."
-  DATABASE_URL="postgresql://appuser:devpassword123@localhost:5432/appdb" \
+  DATABASE_URL="postgresql://appuser:devpassword123@localhost:5432/solver_director" \
       alembic upgrade head
 
   # Clean up
