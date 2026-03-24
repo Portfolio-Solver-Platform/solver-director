@@ -82,7 +82,7 @@ postgres:
   enabled: true
   image:
     repository: postgres
-    tag: "15"
+    tag: "15@sha256:c635fa3e3b7421a659d34abdfd6d492f679cbe8149e261a501237b55c5a94212"
     pullPolicy: IfNotPresent
   replicaCount: 1
   containerName: postgresql
