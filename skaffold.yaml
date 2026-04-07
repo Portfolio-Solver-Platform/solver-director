@@ -43,7 +43,7 @@ profiles:
               solverController.image: "{{.IMAGE_FULLY_QUALIFIED_solver_controller_skaffold}}"
               dataGatherer.image: "{{.IMAGE_FULLY_QUALIFIED_data_gatherer_skaffold}}"
             valuesFiles:
-              - helm/values-dev.yaml
+              - helm/app/values-dev.yaml
 
 
   - name: prod
