@@ -5,7 +5,7 @@ imagePullPolicy: IfNotPresent
 revisionHistoryLimit: 2
 
 app:
-  debug: true  # Enable auto-creation of database tables in development
+  debug: false
 
 migration:
   backoffLimit: 3
@@ -73,7 +73,7 @@ resources:
     memory: "2Gi"
 
 hpa:
-  minReplicas: 1
+  minReplicas: 2
   maxReplicas: 10
   averageUtilization: 70
 

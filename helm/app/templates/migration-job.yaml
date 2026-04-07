@@ -1,4 +1,3 @@
-{{- if not .Values.app.debug }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -45,4 +44,3 @@ spec:
             limits:
               cpu: {{ .Values.migration.resources.limits.cpu }}
               memory: {{ .Values.migration.resources.limits.memory }}
-{{- end }}
