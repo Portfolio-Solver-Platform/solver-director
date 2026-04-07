@@ -55,10 +55,10 @@ probes:
   readiness:
     path: /readyz
     port: 8080
-    initialDelaySeconds: 5   
+    initialDelaySeconds: 5
     timeoutSeconds: 3
     periodSeconds: 5
-    failureThreshold: 2      
+    failureThreshold: 2
 
 
 pdb:
@@ -79,34 +79,11 @@ hpa:
 
 
 postgres:
-  enabled: true
-  image:
-    repository: postgres
-    tag: "15"
-    pullPolicy: IfNotPresent
-  replicaCount: 1
-  containerName: postgresql
   service:
     name: "solver-director-postgres"
     port: 5432
   database:
     name: "solver_director"
-    user: "appuser"
-    password: "devpassword123"
-  securityContext:
-    runAsUser: 999
-    runAsNonRoot: true
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "128Mi"
-    limits:
-      cpu: "1000m"
-      memory: "10Gi"
-  persistence:
-    claimName: "postgres-data"
-    size: "1Gi"
-    storageClass: "postgres-retain"
 
 solverController:
   image: "ghcr.io/portfolio-solver-platform/solver-controller:latest"
