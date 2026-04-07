@@ -40,9 +40,15 @@ spec:
             - name: POSTGRES_DB
               value: {{ .Values.postgres.database.name | quote }}
             - name: POSTGRES_USER
-              value: {{ .Values.postgres.database.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: solver-director-database-credentials
+                  key: user
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgres.database.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: solver-director-database-credentials
+                  key: password
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           ports:

@@ -1,0 +1,26 @@
+postgres:
+  image:
+    repository: postgres
+    tag: "15"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  containerName: postgresql
+  service:
+    name: "solver-director-postgres"
+    port: 5432
+  database:
+    name: "solver_director"
+  securityContext:
+    runAsUser: 999
+    runAsNonRoot: true
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1000m"
+      memory: "10Gi"
+  persistence:
+    claimName: "postgres-data"
+    size: "1Gi"
+    storageClass: "postgres-retain"

@@ -1,4 +1,12 @@
-{{- if not .Values.app.debug }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: solver-director-migration
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -19,7 +27,7 @@ spec:
         app.kubernetes.io/component: migration
     spec:
       restartPolicy: Never
-      serviceAccountName: solver-director
+      serviceAccountName: solver-director-migration
       securityContext:
         runAsNonRoot: {{ .Values.podSecurityContext.runAsNonRoot }}
         seccompProfile:
@@ -36,8 +44,24 @@ spec:
               drop:
                 - ALL
           env:
+            - name: DB_HOST
+              value: {{ .Values.postgres.service.name | quote }}
+            - name: DB_PORT
+              value: {{ .Values.postgres.service.port | quote }}
+            - name: DB_NAME
+              value: {{ .Values.postgres.database.name | quote }}
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: solver-director-database-credentials
+                  key: user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: solver-director-database-credentials
+                  key: password
             - name: DATABASE_URL
-              value: "postgresql://{{ .Values.postgres.database.user }}:{{ .Values.postgres.database.password }}@{{ .Values.postgres.service.name }}:{{ .Values.postgres.service.port }}/{{ .Values.postgres.database.name }}"
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
           resources:
             requests:
               cpu: {{ .Values.migration.resources.requests.cpu }}
@@ -45,4 +69,3 @@ spec:
             limits:
               cpu: {{ .Values.migration.resources.limits.cpu }}
               memory: {{ .Values.migration.resources.limits.memory }}
-{{- end }}

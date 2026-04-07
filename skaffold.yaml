@@ -31,50 +31,34 @@ profiles:
     deploy:
       helm:
         releases:
+          - name: solver-director-database
+            chartPath: helm/database
+            namespace: psp
+            wait: true
           - name: solver-director
-            chartPath: helm
+            chartPath: helm/app
             namespace: psp
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED_solver_director_skaffold}}"
               solverController.image: "{{.IMAGE_FULLY_QUALIFIED_solver_controller_skaffold}}"
               dataGatherer.image: "{{.IMAGE_FULLY_QUALIFIED_data_gatherer_skaffold}}"
-
-
-
-  - name: staging
-    build:
-      local:
-        push: false # TODO set to true
-      # optional: set your staging registry
-      # defaultRepo: "registry.example.com/staging"
-    deploy:
-      helm:
-        releases:
-          - name: solver-director
-            chartPath: helm
-            setValueTemplates:
-              image: "{{.IMAGE_FULLY_QUALIFIED}}"
             valuesFiles:
-              - helm/values-prod.yaml
-            wait: true
-            upgradeOnChange: true
+              - helm/app/values-dev.yaml
 
 
   - name: prod
-    build:
-      local:
-        push: true
-      # optional: set your prod registry
-      # defaultRepo: "registry.example.com/prod"
     deploy:
       helm:
         releases:
+          - name: solver-director-database
+            chartPath: helm/database
+            namespace: psp
+            wait: true
           - name: solver-director
-            chartPath: helm
+            chartPath: helm/app
+            namespace: psp
             setValueTemplates:
               image: "{{.IMAGE_FULLY_QUALIFIED}}"
-            valuesFiles:
-              - helm/values-prod.yaml
             wait: true
             upgradeOnChange: true
 

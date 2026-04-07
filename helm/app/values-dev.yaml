@@ -1,0 +1,5 @@
+app:
+  debug: true
+
+hpa:
+  minReplicas: 1
