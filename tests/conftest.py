@@ -6,6 +6,7 @@ os.environ["DB_HOST"] = "localhost"
 os.environ["DB_PORT"] = "5432"
 os.environ["RABBITMQ_HOST"] = "localhost"
 os.environ["RABBITMQ_PORT"] = "5672"
+os.environ["KEYCLOAK_CLIENT_SECRET"] = "test-secret"  # nosec B105
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
