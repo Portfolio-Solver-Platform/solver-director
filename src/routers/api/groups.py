@@ -63,9 +63,8 @@ scopes = [SCOPES["read"]]
 @router.get(
     "/groups",
     response_model=list[GroupResponse],
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def get_groups(db: Annotated[Session, Depends(get_db)]):
     """Get all groups"""
@@ -177,9 +176,8 @@ scopes = [SCOPES["write"]]
     "/groups",
     response_model=GroupResponse,
     status_code=status.HTTP_201_CREATED,
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def create_group(group_data: GroupCreate, db: Annotated[Session, Depends(get_db)]):
     """Create a new group"""

@@ -378,7 +378,7 @@ scopes = [SCOPES["write"]]
 @router.delete(
     "/projects/{project_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[auth.require_scopes(scopes)],
+    dependencies=[auth.require_scopes(scopes), auth.require_remote_token_validation()],
     openapi_extra=auth.scope_docs(scopes),
 )
 def delete_project(
@@ -390,7 +390,6 @@ def delete_project(
 
     TODO: Also delete solver controller generated data when implemented
     """
-    # TODO: verify with keycloak that the token is valid with require remote token validation
     try:
         uuid_id = UUID(project_id)
     except ValueError:

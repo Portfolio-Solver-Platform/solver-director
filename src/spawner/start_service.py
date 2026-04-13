@@ -17,6 +17,23 @@ from src.config import Config
 import pika
 
 
+def _create_auth_secret(kube_client: client.CoreV1Api, namespace: str):
+    secret = client.V1Secret(
+        metadata=client.V1ObjectMeta(name="psp-auth-client", namespace=namespace),
+        string_data={
+            "id": Config.Keycloak.CLIENT_ID,
+            "secret": Config.Keycloak.CLIENT_SECRET,
+        },
+    )
+    try:
+        kube_client.create_namespaced_secret(namespace=namespace, body=secret)
+    except ApiException as e:
+        if e.status == 409:
+            pass
+        else:
+            raise
+
+
 def start_project_services(project_config, id, user_id):
     users_solver_controller_limit_reached = is_user_limit_reached(user_id)
     if users_solver_controller_limit_reached:
@@ -132,6 +149,9 @@ def start_project_services(project_config, id, user_id):
         else:
             raise
 
+    _create_auth_secret(kube_client, id)
+    _create_auth_secret(kube_client, _solvers_namespace)
+
     control_queue = control_queue_name(id)
     solver_director_result_queue = solver_director_result_queue_name()
     result_queue = result_queue_name(id)
@@ -235,6 +255,14 @@ def create_solver_controller_pod_manifest(project_id, control_queue, result_queu
                         {
                             "name": "RABBITMQ_PASSWORD",
                             "value": Config.RabbitMQ.PASSWORD,
+                        },
+                        {
+                            "name": "KEYCLOAK_CLIENT_ID",
+                            "valueFrom": {"secretKeyRef": {"name": "psp-auth-client", "key": "id"}},
+                        },
+                        {
+                            "name": "KEYCLOAK_CLIENT_SECRET",
+                            "valueFrom": {"secretKeyRef": {"name": "psp-auth-client", "key": "secret"}},
                         },
                     ],
                     "volumeMounts": [
