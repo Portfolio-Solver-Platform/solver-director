@@ -98,9 +98,8 @@ scopes = [SCOPES["read"]]
     "/solvers/{id}",
     response_model=SolverDetailResponse,
     summary="Get solver by ID",
-    # TODO: re-enable auth once solver-controller has a service account token
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def get_solver_by_id(id: int, db: Annotated[Session, Depends(get_db)]):
     """Get solver details by ID"""
@@ -120,9 +119,8 @@ scopes = [SCOPES["write"]]
     "/solvers",
     response_model=SolverUploadResponse,
     status_code=status.HTTP_201_CREATED,
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def register_solver(
     image_name: Annotated[
@@ -219,9 +217,8 @@ def register_solver(
 @router.patch(
     "/solvers/images/{image_name}",
     response_model=SolverUploadResponse,
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes([SCOPES["write"]])],
-    # openapi_extra=auth.scope_docs([SCOPES["write"]]),
+    dependencies=[auth.require_scopes([SCOPES["write"]])],
+    openapi_extra=auth.scope_docs([SCOPES["write"]]),
 )
 def update_solver_image_url(
     image_name: str,

@@ -57,9 +57,8 @@ scopes = [SCOPES["write"]]
     "/problems/{problem_id}/instances",
     response_model=InstanceResponse,
     status_code=status.HTTP_201_CREATED,
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 async def upload_instance(
     problem_id: int,
@@ -137,9 +136,8 @@ scopes = [SCOPES["read"]]
 
 @router.get(
     "/problems/{problem_id}/instances/{instance_id}/file",
-    # TODO: re-enable auth once solver pods have a service account token
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def download_instance(
     problem_id: int, instance_id: int, db: Annotated[Session, Depends(get_db)]

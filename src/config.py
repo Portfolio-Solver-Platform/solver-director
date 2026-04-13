@@ -58,10 +58,6 @@ class Config:
     )
     SOLVER_DIRECTOR_URL = "http://solver-director.solver-director.svc.cluster.local"
 
-    # class Keycloak:
-    #     CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "solver-director")
-    #     CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET")  # Required from secret
-    #     WELL_KNOWN_URL = os.getenv(
-    #         "KEYCLOAK_WELL_KNOWN_URL",
-    #         "http://user.psp.svc.cluster.local:8080/v1/.well-known/openid-configuration/internal"
-    #     )
+    class Keycloak:
+        CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "solver-director")
+        CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET")

@@ -87,9 +87,8 @@ scopes = [SCOPES["write"]]
     "/problems",
     response_model=ProblemResponse,
     status_code=status.HTTP_201_CREATED,
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def create_problem(
     request: ProblemCreateRequest,
@@ -269,9 +268,8 @@ scopes = [SCOPES["read"]]
 
 @router.get(
     "/problems/{problem_id}/file",
-    # TODO: re-enable auth once solver pods have a service account token
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 def download_problem(problem_id: int, db: Annotated[Session, Depends(get_db)]):
     """Download problem file"""
@@ -300,9 +298,8 @@ scopes = [SCOPES["write"]]
 @router.put(
     "/problems/{problem_id}/file",
     response_model=ProblemResponse,
-    # TODO: re-enable auth once setup scripts have service account credentials
-    # dependencies=[auth.require_scopes(scopes)],
-    # openapi_extra=auth.scope_docs(scopes),
+    dependencies=[auth.require_scopes(scopes)],
+    openapi_extra=auth.scope_docs(scopes),
 )
 async def upload_problem_file(
     problem_id: int,
