@@ -15,7 +15,7 @@ jobs:
       contents: read
       packages: write
 
-    uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/push.yaml@main
+    uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/push.yaml@d42d631d88213f69978016b0414f7583e0314c9a # main
     with:
       image_name: solver-director
     secrets:
