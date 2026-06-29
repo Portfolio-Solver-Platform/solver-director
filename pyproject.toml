@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.135,<0.136",
-    "prometheus-fastapi-instrumentator>=7.1.0,<8.0",
+    "prometheus-fastapi-instrumentator>=8.0.2,<8.1",
     "psycopg2-binary>=2.9.11,<3.0",
     "sqlalchemy>=2.0.48,<3.0",
     "alembic>=1.18,<2.0",
