@@ -11,6 +11,6 @@ jobs:
     permissions:
       contents: read
 
-    uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/python-ci.yaml@main
+    uses: Portfolio-Solver-Platform/infrastructure/.github/workflows/python-ci.yaml@73d8ba278f93b501610f87334886f158323b85f7 # main
     with:
       code_audit_targets: "./src/ ./alembic/"

@@ -1,7 +1,7 @@
 postgres:
   image:
     repository: postgres
-    tag: "15"
+    tag: "15@sha256:b0a199c49fa974cf5b18c0bafb128b8023142705b23235892821fa9ac2d2cbb8"
     pullPolicy: IfNotPresent
   replicaCount: 1
   containerName: postgresql
